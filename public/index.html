@@ -205,13 +205,17 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   <section class="card auth auth-only" aria-labelledby="authTitle">
     <h2 id="authTitle">Sign in</h2>
-    <p>Enter the email address you were invited with. We'll send you a sign-in link.</p>
+    <p>Sign in with the email and password the app owner gave you.</p>
     <form id="authForm" class="auth">
       <div class="field">
         <label for="authEmail">Email</label>
         <input type="email" id="authEmail" autocomplete="email" inputmode="email" required placeholder="you@example.com">
       </div>
-      <div class="actions"><button type="submit" id="authBtn">Send sign-in link</button></div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required>
+      </div>
+      <div class="actions"><button type="submit" id="authBtn">Sign in</button></div>
       <div class="status" id="authStatus" aria-live="polite"></div>
     </form>
   </section>
@@ -818,18 +822,20 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     e.preventDefault();
     const email = $("authEmail").value.trim();
     const st = $("authStatus"); st.classList.remove("err");
-    if (!sb || !email) return;
-    $("authBtn").disabled = true; st.textContent = "Sending…";
-    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin } });
+    const password = $("authPassword").value;
+    if (!sb || !email || !password) return;
+    $("authBtn").disabled = true; st.textContent = "Signing in…";
+    const { error } = await sb.auth.signInWithPassword({ email, password });
     $("authBtn").disabled = false;
     if (error) {
       st.classList.add("err");
-      st.textContent = /signups? not allowed|not found|otp_disabled/i.test(error.message)
-        ? "That email hasn't been invited. Ask the app owner for an invite."
-        : /rate|too many/i.test(error.message) ? "Too many attempts. Wait a minute and try again." : "Couldn't send the link. Try again.";
+      st.textContent = /invalid login credentials/i.test(error.message)
+        ? "Wrong email or password."
+        : /not confirmed/i.test(error.message) ? "This account isn't confirmed yet. Ask the app owner."
+        : /rate|too many/i.test(error.message) ? "Too many attempts. Wait a minute and try again." : "Couldn't sign in. Try again.";
       return;
     }
-    st.textContent = `Check ${email} for a sign-in link. Open it on this device.`;
+    $("authPassword").value = ""; st.textContent = "";
   });
   $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); });
 
