@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: white page, soft gray panels, one bright blue accent; summary first, then trend, scoring, records, log. Logging opens as a full-screen sheet. */
 :root {
@@ -43,6 +43,20 @@
   --accent: #5b82ff; --birdie: #00d46a; --bogey: #ffb100; --double: #ff6600; --triple: #ff2454;
   color-scheme: dark;
 }
+/* agent mode: everyone except baby-mode accounts */
+body.agent {
+  --bg: #050607; --panel: #0b100d; --ink: #d7ffe4; --muted: #5f8a70; --line: #1d2a23;
+  --accent: #00ff88; --on-accent: #001a0d;
+  --font: "Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+  background-image: repeating-linear-gradient(0deg, rgba(0,255,136,.035) 0 1px, transparent 1px 3px);
+}
+body.agent .card { position: relative; border: 1px solid #1d3a2a; border-radius: 4px; box-shadow: inset 0 0 28px rgba(0,255,136,.05); }
+body.agent .card::before { content: "TOP SECRET // EYES ONLY"; position: absolute; top: 4px; left: 18px; font-size: 9px; letter-spacing: .25em; color: #ff3355; pointer-events: none; }
+body.agent h1, body.agent h2 { text-transform: uppercase; letter-spacing: .14em; font-weight: 400; }
+body.agent h1 { color: var(--accent); text-shadow: 0 0 14px rgba(0,255,136,.55); }
+body.agent header .meta { letter-spacing: .08em; text-transform: uppercase; }
+
 /* baby mode: shown to accounts listed in BABY_HASHES */
 body.baby {
   --bg: #fff4fa; --panel: #e8f4ff; --ink: #4a3b6b; --muted: #9a87b8; --line: #ffd6ea;
@@ -203,19 +217,19 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 </style>
 
 </head>
-<body class="signed-out">
+<body class="signed-out agent">
 <main>
   <header>
     <div class="head-text">
-      <h1 data-baby="Baby's First Golf 🍼">Golf</h1>
+      <h1 data-baby="Baby's First Golf 🍼" data-agent="Golf Ops // Classified">Golf</h1>
       <span class="meta num" id="headMeta">Your rounds and stats</span>
     </div>
-    <button type="button" class="text app-only" id="signOutBtn" data-baby="Nap time 😴">Sign out</button>
+    <button type="button" class="text app-only" id="signOutBtn" data-baby="Nap time 😴" data-agent="Go dark">Sign out</button>
   </header>
 
   <section class="card auth auth-only" aria-labelledby="authTitle">
-    <h2 id="authTitle">Sign in</h2>
-    <p>Sign in with the email and password the app owner gave you.</p>
+    <h2 id="authTitle" data-agent="Identify yourself, agent">Sign in</h2>
+    <p data-agent="Restricted facility. Enter your credentials. Unauthorized access will be dealt with.">Sign in with the email and password the app owner gave you.</p>
     <form id="authForm" class="auth">
       <div class="field">
         <label for="authEmail">Email</label>
@@ -225,7 +239,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
         <label for="authPassword">Password</label>
         <input type="password" id="authPassword" autocomplete="current-password" required>
       </div>
-      <div class="actions"><button type="submit" id="authBtn">Sign in</button></div>
+      <div class="actions"><button type="submit" id="authBtn" data-agent="Authenticate">Sign in</button></div>
       <div class="status" id="authStatus" aria-live="polite"></div>
     </form>
   </section>
@@ -234,7 +248,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   <section class="app-only card tiles" aria-label="Summary">
     <div class="tile main">
-      <span class="label">Handicap index</span>
+      <span class="label" data-baby="Handicap index (it's just a number 💕)" data-agent="Lethality index">Handicap index</span>
       <span class="value num" id="hcp">–</span>
       <span class="sub" id="hcpSub">Log 3 rounds with rating and slope to see it</span>
     </div>
@@ -246,7 +260,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   <section class="app-only card" aria-label="Score trend">
     <div class="card-head">
-      <h2 data-baby="Big Numbers Over Time 📈">Score over time</h2>
+      <h2 data-baby="Big Numbers Over Time 📈" data-agent="Mission performance">Score over time</h2>
       <div class="seg" role="group" aria-label="Chart rounds">
         <button type="button" id="chart18" aria-pressed="true">18 holes</button>
         <button type="button" id="chart9" aria-pressed="false">9 holes</button>
@@ -256,18 +270,18 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   </section>
 
   <section class="app-only card" aria-label="Hole scoring">
-    <div class="card-head"><h2 data-baby="Boo-Boos Per Hole 🩹">Hole scoring</h2><span class="meta" id="mixSub"></span></div>
+    <div class="card-head"><h2 data-baby="Boo-Boos Per Hole 🩹" data-agent="Target elimination report">Hole scoring</h2><span class="meta" id="mixSub"></span></div>
     <div id="mix"><p class="empty">Log rounds with hole scores and par to see your birdies, pars and bogeys.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Course records">
-    <div class="card-head"><h2 data-baby="Gold Stars ⭐">Course records</h2></div>
+    <div class="card-head"><h2 data-baby="Gold Stars ⭐" data-agent="Best operations by location">Course records</h2></div>
     <div class="tbl" id="records"><p class="empty">Your best score at each course will show here.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Rounds">
     <div class="card-head">
-      <h2 data-baby="Wittle Rounds 🧸">Rounds</h2>
+      <h2 data-baby="Wittle Rounds 🧸" data-agent="Mission log">Rounds</h2>
       <button type="button" class="ghost small" id="exportBtn">Export CSV</button>
     </div>
     <div class="status" id="exportStatus" aria-live="polite"></div>
@@ -277,7 +291,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 <section class="sheet hidden" id="addCard" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="sheet-inner">
     <div class="sheet-head">
-      <h1 id="sheetTitle" data-baby="Tell Us About Your Round, Sweetie 🍼">Log a round</h1>
+      <h1 id="sheetTitle" data-baby="Tell Us About Your Round, Sweetie 🍼" data-agent="File after-action report">Log a round</h1>
       <button type="button" class="ghost small" id="closeAdd">Close</button>
     </div>
     <label class="photo" for="photo">
@@ -332,7 +346,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     </form>
   </div>
 </section>
-<button type="button" class="fab app-only" id="toggleAdd">+ Log round</button>
+<button type="button" class="fab app-only" id="toggleAdd" data-baby="+ Add a round 🍼" data-agent="+ New mission">+ Log round</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -429,7 +443,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     const rs = rounds.slice().sort(byDateDesc);
     $("headMeta").textContent = isBaby
       ? (rs.length ? `${rs.length} brave wittle round${rs.length === 1 ? "" : "s"} 🧸` : "No rounds yet, and that's okay 💕")
-      : (rs.length ? `${rs.length} round${rs.length === 1 ? "" : "s"} logged` : "Your rounds and stats");
+      : `Agent ${codename} // ${rs.length} mission${rs.length === 1 ? "" : "s"} on file`;
 
     // tiles
     const h = handicapIndex(rs);
@@ -608,7 +622,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   function openSheet(r) {
     resetForm();
     editing = r || null;
-    $("sheetTitle").textContent = r ? (isBaby ? "Fix Your Oopsie 🍼" : "Edit round") : (isBaby ? "Tell Us About Your Round, Sweetie 🍼" : "Log a round");
+    $("sheetTitle").textContent = r ? (isBaby ? "Fix Your Oopsie 🍼" : "Amend dossier") : (isBaby ? "Tell Us About Your Round, Sweetie 🍼" : "File after-action report");
     $("saveBtn").textContent = r ? "Save changes" : "Save round";
     if (r) {
       $("course").value = r.course || "";
@@ -821,18 +835,26 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // ---------- baby mode ----------
   // SHA-256 of lowercased emails that get baby mode (hashed so emails aren't public in the repo).
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
-  let isBaby = false;
+  let isBaby = false, codename = "";
+  const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
   }
   async function applyBaby(sess) {
-    isBaby = false;
-    try { if (sess && sess.user.email) isBaby = BABY_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
+    isBaby = false; codename = "";
+    try {
+      if (sess && sess.user.email) {
+        isBaby = BABY_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase()));
+        codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length];
+      }
+    } catch {}
     document.body.classList.toggle("baby", isBaby);
+    document.body.classList.toggle("agent", !isBaby);
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = isBaby ? "#fff4fa" : "#050607";
     document.querySelectorAll("[data-baby]").forEach(el => {
       if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
-      el.textContent = isBaby ? el.dataset.baby : el.dataset.adult;
+      el.textContent = (isBaby ? el.dataset.baby : el.dataset.agent) || el.dataset.adult;
     });
   }
 
@@ -855,7 +877,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     const st = $("authStatus"); st.classList.remove("err");
     const password = $("authPassword").value;
     if (!sb || !email || !password) return;
-    $("authBtn").disabled = true; st.textContent = "Signing in…";
+    $("authBtn").disabled = true; st.textContent = isBaby ? "Signing in…" : "Verifying credentials…";
     const { error } = await sb.auth.signInWithPassword({ email, password });
     $("authBtn").disabled = false;
     if (error) {
