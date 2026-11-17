@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: white page, soft gray panels, one bright blue accent; summary first, then trend, scoring, records, log. Logging opens as a full-screen sheet. */
 :root {
@@ -43,6 +43,16 @@
   --accent: #5b82ff; --birdie: #00d46a; --bogey: #ffb100; --double: #ff6600; --triple: #ff2454;
   color-scheme: dark;
 }
+/* baby mode: shown to accounts listed in BABY_HASHES */
+body.baby {
+  --bg: #fff4fa; --panel: #e8f4ff; --ink: #4a3b6b; --muted: #9a87b8; --line: #ffd6ea;
+  --accent: #ff7eb6; --on-accent: #ffffff;
+  --font: "Fredoka", "Comic Sans MS", system-ui, sans-serif;
+  color-scheme: light;
+  background-image: radial-gradient(#ffd6ea 2px, transparent 2px); background-size: 24px 24px;
+}
+body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
+body.baby h1, body.baby h2 { letter-spacing: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
@@ -197,10 +207,10 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 <main>
   <header>
     <div class="head-text">
-      <h1>Golf</h1>
+      <h1 data-baby="Baby's First Golf 🍼">Golf</h1>
       <span class="meta num" id="headMeta">Your rounds and stats</span>
     </div>
-    <button type="button" class="text app-only" id="signOutBtn">Sign out</button>
+    <button type="button" class="text app-only" id="signOutBtn" data-baby="Nap time 😴">Sign out</button>
   </header>
 
   <section class="card auth auth-only" aria-labelledby="authTitle">
@@ -236,7 +246,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   <section class="app-only card" aria-label="Score trend">
     <div class="card-head">
-      <h2>Score over time</h2>
+      <h2 data-baby="Big Numbers Over Time 📈">Score over time</h2>
       <div class="seg" role="group" aria-label="Chart rounds">
         <button type="button" id="chart18" aria-pressed="true">18 holes</button>
         <button type="button" id="chart9" aria-pressed="false">9 holes</button>
@@ -246,18 +256,18 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   </section>
 
   <section class="app-only card" aria-label="Hole scoring">
-    <div class="card-head"><h2>Hole scoring</h2><span class="meta" id="mixSub"></span></div>
+    <div class="card-head"><h2 data-baby="Boo-Boos Per Hole 🩹">Hole scoring</h2><span class="meta" id="mixSub"></span></div>
     <div id="mix"><p class="empty">Log rounds with hole scores and par to see your birdies, pars and bogeys.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Course records">
-    <div class="card-head"><h2>Course records</h2></div>
+    <div class="card-head"><h2 data-baby="Gold Stars ⭐">Course records</h2></div>
     <div class="tbl" id="records"><p class="empty">Your best score at each course will show here.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Rounds">
     <div class="card-head">
-      <h2>Rounds</h2>
+      <h2 data-baby="Wittle Rounds 🧸">Rounds</h2>
       <button type="button" class="ghost small" id="exportBtn">Export CSV</button>
     </div>
     <div class="status" id="exportStatus" aria-live="polite"></div>
@@ -267,7 +277,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 <section class="sheet hidden" id="addCard" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
   <div class="sheet-inner">
     <div class="sheet-head">
-      <h1 id="sheetTitle">Log a round</h1>
+      <h1 id="sheetTitle" data-baby="Tell Us About Your Round, Sweetie 🍼">Log a round</h1>
       <button type="button" class="ghost small" id="closeAdd">Close</button>
     </div>
     <label class="photo" for="photo">
@@ -417,7 +427,9 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // ---------- render ----------
   function render() {
     const rs = rounds.slice().sort(byDateDesc);
-    $("headMeta").textContent = rs.length ? `${rs.length} round${rs.length === 1 ? "" : "s"} logged` : "Your rounds and stats";
+    $("headMeta").textContent = isBaby
+      ? (rs.length ? `${rs.length} brave wittle round${rs.length === 1 ? "" : "s"} 🧸` : "No rounds yet, and that's okay 💕")
+      : (rs.length ? `${rs.length} round${rs.length === 1 ? "" : "s"} logged` : "Your rounds and stats");
 
     // tiles
     const h = handicapIndex(rs);
@@ -596,7 +608,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   function openSheet(r) {
     resetForm();
     editing = r || null;
-    $("sheetTitle").textContent = r ? "Edit round" : "Log a round";
+    $("sheetTitle").textContent = r ? (isBaby ? "Fix Your Oopsie 🍼" : "Edit round") : (isBaby ? "Tell Us About Your Round, Sweetie 🍼" : "Log a round");
     $("saveBtn").textContent = r ? "Save changes" : "Save round";
     if (r) {
       $("course").value = r.course || "";
@@ -806,9 +818,28 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     st.textContent = "";
   });
 
+  // ---------- baby mode ----------
+  // SHA-256 of lowercased emails that get baby mode (hashed so emails aren't public in the repo).
+  const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
+  let isBaby = false;
+  async function sha256(text) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function applyBaby(sess) {
+    isBaby = false;
+    try { if (sess && sess.user.email) isBaby = BABY_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
+    document.body.classList.toggle("baby", isBaby);
+    document.querySelectorAll("[data-baby]").forEach(el => {
+      if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
+      el.textContent = isBaby ? el.dataset.baby : el.dataset.adult;
+    });
+  }
+
   // ---------- init ----------
   async function onSession(sess) {
     session = sess;
+    await applyBaby(sess);
     document.body.classList.toggle("signed-out", !sess);
     if (!sess) { rounds = []; courses = []; render(); return; }
     $("headMeta").textContent = sess.user.email || "Your rounds and stats";
