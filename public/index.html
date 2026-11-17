@@ -441,7 +441,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // ---------- render ----------
   function render() {
     const rs = rounds.slice().sort(byDateDesc);
-    $("headMeta").textContent = isBaby
+    $("headMeta").textContent = !session ? "Your rounds and stats" : isBaby
       ? (rs.length ? `${rs.length} brave wittle round${rs.length === 1 ? "" : "s"} 🧸` : "No rounds yet, and that's okay 💕")
       : `Agent ${codename} // ${rs.length} mission${rs.length === 1 ? "" : "s"} on file`;
 
