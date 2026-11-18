@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Scores</title>
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Golf">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -182,6 +182,24 @@ label.photo input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .auth p { margin: 0; color: var(--muted); font-size: 15px; }
 .auth input { background: var(--bg); }
 body.signed-out .app-only { display: none !important; }
+
+/* sign-in: black page, a small mark, two fields, one button */
+body.signed-out { --bg: #000; --panel: #0a0a0a; --ink: #ededed; --muted: #6e6e6e; --line: #2a2a2a; --accent: #ededed; --on-accent: #000; color-scheme: dark; }
+body.signed-out header { display: none; }
+body.signed-out main { min-height: 100svh; align-content: center; padding: 28px 24px; }
+body.signed-out .status.err { color: #ff5a4e; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.gate { display: grid; justify-items: center; gap: 44px; width: 100%; max-width: 300px; margin: 0 auto; }
+.gate-mark { width: 34px; height: 34px; color: var(--ink); }
+.gate-form { display: grid; gap: 8px; width: 100%; }
+.gate-form input[type=email], .gate-form input[type=password], .gate-form input[type=text] { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 12px 2px; }
+.gate-form input:focus { border-color: var(--ink); }
+.gate-form input::placeholder { color: var(--muted); }
+.pw { position: relative; }
+.pw input { padding-right: 52px !important; }
+.pw-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: transparent; color: var(--muted); padding: 6px 2px; font-size: 12px; font-weight: 600; border-radius: 0; }
+#authBtn { margin-top: 22px; width: 100%; border-radius: 2px; background: var(--ink); color: #000; }
+.gate .status { text-align: center; font-size: 13px; }
 body:not(.signed-out) .auth-only { display: none !important; }
 header { grid-template-columns: 1fr auto; align-items: start; }
 header .head-text { display: grid; gap: 2px; }
@@ -273,19 +291,17 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     </div>
   </header>
 
-  <section class="card auth auth-only" aria-labelledby="authTitle">
-    <h2 id="authTitle">Sign in</h2>
-    <p>Sign in with the email and password the app owner gave you.</p>
-    <form id="authForm" class="auth">
-      <div class="field">
-        <label for="authEmail">Email</label>
-        <input type="email" id="authEmail" autocomplete="email" inputmode="email" required placeholder="you@example.com">
+  <section class="gate auth-only" aria-label="Sign in">
+    <svg class="gate-mark" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="20" cy="20" r="2.5" fill="currentColor"/></svg>
+    <form id="authForm" class="gate-form">
+      <label for="authEmail" class="sr-only">Email</label>
+      <input type="email" id="authEmail" autocomplete="email" inputmode="email" required placeholder="Email">
+      <div class="pw">
+        <label for="authPassword" class="sr-only">Password</label>
+        <input type="password" id="authPassword" autocomplete="current-password" required placeholder="Password">
+        <button type="button" class="pw-toggle" id="pwToggle" aria-pressed="false" aria-label="Show password">Show</button>
       </div>
-      <div class="field">
-        <label for="authPassword">Password</label>
-        <input type="password" id="authPassword" autocomplete="current-password" required>
-      </div>
-      <div class="actions"><button type="submit" id="authBtn">Sign in</button></div>
+      <button type="submit" id="authBtn">Enter</button>
       <div class="status" id="authStatus" aria-live="polite"></div>
     </form>
   </section>
@@ -903,7 +919,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   function applyTheme(name) {
     theme = THEMES.includes(name) ? name : "";
     for (const t of THEMES) document.body.classList.toggle(t, theme === t);
-    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = THEME_COLORS[theme] || "#ffffff";
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = THEME_COLORS[theme] || "#000000";
     document.querySelectorAll("[data-baby], [data-agent], [data-clubhouse]").forEach(el => {
       if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
@@ -951,18 +967,28 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     const st = $("authStatus"); st.classList.remove("err");
     const password = $("authPassword").value;
     if (!sb || !email || !password) return;
-    $("authBtn").disabled = true; st.textContent = "Signing in…";
+    $("authBtn").disabled = true; st.textContent = "";
     const { error } = await sb.auth.signInWithPassword({ email, password });
     $("authBtn").disabled = false;
     if (error) {
       st.classList.add("err");
       st.textContent = /invalid login credentials/i.test(error.message)
-        ? "Wrong email or password."
+        ? "Incorrect email or password."
         : /not confirmed/i.test(error.message) ? "This account isn't confirmed yet. Ask the app owner."
         : /rate|too many/i.test(error.message) ? "Too many attempts. Wait a minute and try again." : "Couldn't sign in. Try again.";
       return;
     }
     $("authPassword").value = ""; st.textContent = "";
+    if ($("authPassword").type !== "password") $("pwToggle").click();
+    try { localStorage.setItem("golf.lastEmail", email); } catch {}
+  });
+  try { const last = localStorage.getItem("golf.lastEmail"); if (last) $("authEmail").value = last; } catch {}
+  $("pwToggle").addEventListener("click", () => {
+    const show = $("authPassword").type === "password";
+    $("authPassword").type = show ? "text" : "password";
+    $("pwToggle").textContent = show ? "Hide" : "Show";
+    $("pwToggle").setAttribute("aria-pressed", String(show));
+    $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password");
   });
   $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); });
 
