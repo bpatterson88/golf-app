@@ -99,6 +99,11 @@ body.clubhouse input[type=text], body.clubhouse input[type=number], body.clubhou
 body.clubhouse label.photo { border-radius: 2px; border-color: var(--brass-line); }
 body.clubhouse .theme-menu, body.clubhouse .banner, body.clubhouse .pill, body.clubhouse .preview { border-radius: 2px; }
 
+/* colorblind-friendly score colors (Okabe-Ito based), for accounts in COLORBLIND_HASHES; works with every theme */
+body.cb { --birdie: #0072b2; --par: #56b4e9; --bogey: #f0e442; --double: #e69f00; --triple: #d55e00; }
+body.cb .mini .s.eagle, body.cb .mini .s.birdie { color: #ffffff; border-radius: 50%; }
+body.cb .mini .s.bogey, body.cb .mini .s.double, body.cb .mini .s.triple { border-radius: 1px; }
+
 /* theme picker */
 .head-actions { display: flex; align-items: center; gap: 2px; position: relative; }
 .theme-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; display: grid; gap: 4px; padding: 6px; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
@@ -210,6 +215,7 @@ header .head-text { display: grid; gap: 2px; }
 #mix { display: grid; gap: 14px; }
 .bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); }
 .bar span { display: block; height: 100%; }
+.bar span + span { box-shadow: inset 2px 0 0 var(--panel); }
 .mix { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .mix .v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mix .l { font-size: 12px; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
@@ -591,7 +597,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     $("mixSub").textContent = `${holes} holes · ${nRounds} round${nRounds === 1 ? "" : "s"}`;
     const pct = (n) => Math.round((n / holes) * 100) + "%";
     const segs = [["under", "Birdie+", "var(--birdie)"], ["par", "Par", "var(--par)"], ["bogey", "Bogey", "var(--bogey)"], ["double", "Double", "var(--double)"], ["triple", "Triple+", "var(--triple)"]];
-    $("mix").innerHTML = `<div class="bar" aria-hidden="true">${segs.map(([k, , col]) => `<span style="width:${(c[k] / holes) * 100}%;background:${col}"></span>`).join("")}</div>
+    $("mix").innerHTML = `<div class="bar" aria-hidden="true">${segs.filter(([k]) => c[k] > 0).map(([k, , col]) => `<span style="width:${(c[k] / holes) * 100}%;background:${col}"></span>`).join("")}</div>
       <div class="mix">${segs.map(([k, label, col]) => `<div><div class="v">${pct(c[k])}</div><div class="l"><span class="dot" style="background:${col}"></span>${label}</div></div>`).join("")}</div>`;
   }
 
@@ -901,6 +907,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // Default theme for people who haven't picked one: baby for accounts in BABY_HASHES, agent for everyone else.
   // SHA-256 of lowercased emails (hashed so emails aren't public in the repo).
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
+  const COLORBLIND_HASHES = ["c6ee4741717bc589fa9560d27d3e992310f0a6e69910814e9d44036b13cdfde3"];
   const THEMES = ["agent", "clubhouse", "baby"];
   const THEME_COLORS = { agent: "#050607", clubhouse: "#0e1d16", baby: "#fff4fa" };
   let theme = "", codename = "";
@@ -947,6 +954,9 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // ---------- init ----------
   async function onSession(sess) {
     session = sess;
+    let cb = false;
+    try { cb = !!(sess && sess.user.email) && COLORBLIND_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
+    document.body.classList.toggle("cb", cb);
     if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); rounds = []; courses = []; render(); return; }
     codename = "";
     try { codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length]; } catch {}
