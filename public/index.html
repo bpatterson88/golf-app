@@ -204,6 +204,9 @@ body.signed-out .status.err { color: #ff5a4e; }
 .pw-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: transparent; color: var(--muted); padding: 6px 2px; font-size: 12px; font-weight: 600; border-radius: 0; }
 #authBtn { margin-top: 22px; width: 100%; border-radius: 2px; background: #1f1f1f; color: var(--ink); }
 .gate .status { text-align: center; font-size: 13px; }
+.diag { font-size: 11px; color: var(--muted); text-align: center; margin-top: 18px; }
+/* hide everything until the saved sign-in has been checked, so the sign-in page doesn't flash */
+body.booting main { visibility: hidden; }
 body:not(.signed-out) .auth-only { display: none !important; }
 header { grid-template-columns: 1fr auto; align-items: start; }
 header .head-text { display: grid; gap: 2px; }
@@ -278,7 +281,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 </style>
 
 </head>
-<body class="signed-out">
+<body class="signed-out booting">
 <main>
   <header>
     <div class="head-text">
@@ -307,6 +310,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       </div>
       <button type="submit" id="authBtn">Enter</button>
       <div class="status" id="authStatus" aria-live="polite"></div>
+      <div class="diag" id="authDiag"></div>
     </form>
   </section>
 
@@ -957,12 +961,12 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     let cb = false;
     try { cb = !!(sess && sess.user.email) && COLORBLIND_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
     document.body.classList.toggle("cb", cb);
-    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); rounds = []; courses = []; render(); return; }
+    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); document.body.classList.remove("booting"); rounds = []; courses = []; render(); return; }
     codename = "";
     try { codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length]; } catch {}
     const { data } = await sb.from("profiles").select("player_hint, theme").eq("user_id", sess.user.id).maybeSingle();
     applyTheme(data && THEMES.includes(data.theme) ? data.theme : await defaultTheme(sess));
-    document.body.classList.remove("signed-out");
+    document.body.classList.remove("signed-out", "booting");
     $("headMeta").textContent = sess.user.email || "Your rounds and stats";
     playerHint = (data && data.player_hint) || "";
     if (!$("player").value) $("player").value = playerHint;
@@ -1000,7 +1004,63 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   });
   $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); });
 
+  // ---------- durable sign-in storage ----------
+  // Supabase keeps the session under one key. Save it in localStorage AND a long-lived cookie
+  // (chunked, since a session can exceed one cookie's 4 KB limit). On load, use whichever still has it.
+  const COOKIE_MAX_AGE = 60 * 60 * 24 * 365, CHUNK = 3000;
+  const cookieName = (k) => "g_" + String(k).replace(/[^A-Za-z0-9_-]/g, "_");
+  function readCookieRaw(name) {
+    const m = document.cookie.split("; ").find(c => c.startsWith(name + "="));
+    return m ? m.slice(name.length + 1) : null;
+  }
+  function setCookieRaw(name, val, maxAge) {
+    document.cookie = `${name}=${val}; path=/; max-age=${maxAge}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+  }
+  function readCookie(k) {
+    const base = cookieName(k), n = parseInt(readCookieRaw(base + "_n") || "", 10);
+    if (!Number.isFinite(n) || n < 1) return null;
+    let enc = "";
+    for (let i = 0; i < n; i++) { const part = readCookieRaw(`${base}_${i}`); if (part == null) return null; enc += part; }
+    try { return decodeURIComponent(enc); } catch { return null; }
+  }
+  function deleteCookie(k) {
+    const base = cookieName(k), n = parseInt(readCookieRaw(base + "_n") || "0", 10) || 0;
+    for (let i = 0; i < n; i++) setCookieRaw(`${base}_${i}`, "", 0);
+    setCookieRaw(base + "_n", "", 0);
+  }
+  function writeCookie(k, v) {
+    deleteCookie(k);
+    const enc = encodeURIComponent(v), base = cookieName(k), n = Math.ceil(enc.length / CHUNK) || 1;
+    for (let i = 0; i < n; i++) setCookieRaw(`${base}_${i}`, enc.slice(i * CHUNK, (i + 1) * CHUNK), COOKIE_MAX_AGE);
+    setCookieRaw(base + "_n", String(n), COOKIE_MAX_AGE);
+  }
+  let lsWorks = false;
+  try { localStorage.setItem("golf.test", "1"); localStorage.removeItem("golf.test"); lsWorks = true; } catch {}
+  const durableStorage = {
+    getItem(k) {
+      let v = null;
+      if (lsWorks) { try { v = localStorage.getItem(k); } catch {} }
+      if (v == null) { v = readCookie(k); if (v != null && lsWorks) { try { localStorage.setItem(k, v); } catch {} } }
+      return v;
+    },
+    setItem(k, v) { if (lsWorks) { try { localStorage.setItem(k, v); } catch {} } writeCookie(k, v); },
+    removeItem(k) { if (lsWorks) { try { localStorage.removeItem(k); } catch {} } deleteCookie(k); },
+  };
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch {}
+
+  // TEMPORARY: shows on the sign-in screen what happened to the saved sign-in on load. Remove once the logout issue is solved.
+  function reportDiag(authKey, sess) {
+    if (sess) { $("authDiag").textContent = ""; return; }
+    let inLs = false; if (lsWorks) { try { inLs = localStorage.getItem(authKey) != null; } catch {} }
+    const inCookie = readCookie(authKey) != null;
+    const had = bootHad.ls || bootHad.cookie;
+    $("authDiag").textContent = `diag · storage ${lsWorks ? "ok" : "blocked"} · saved session: ${had ? "rejected" : "none"}`
+      + ` · ls ${bootHad.ls ? 1 : 0}→${inLs ? 1 : 0} · cookie ${bootHad.cookie ? 1 : 0}→${inCookie ? 1 : 0}`;
+  }
+  const bootHad = { ls: false, cookie: false };
+
   async function init() {
+    setTimeout(() => document.body.classList.remove("booting"), 8000);
     resetForm();
     render();
     try {
@@ -1009,15 +1069,21 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       if (!r.ok) throw new Error(cfg && cfg.error);
     } catch (e) {
       banner("The app isn't configured yet. See the setup guide (README).", true);
+      document.body.classList.remove("booting");
       return;
     }
-    if (!window.supabase) { banner("Couldn't load sign-in. Check your connection and reload.", true); return; }
-    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    if (!window.supabase) { banner("Couldn't load sign-in. Check your connection and reload.", true); document.body.classList.remove("booting"); return; }
+    let authKey = "";
+    try { authKey = `sb-${new URL(cfg.supabaseUrl).hostname.split(".")[0]}-auth-token`; } catch {}
+    if (lsWorks) { try { bootHad.ls = localStorage.getItem(authKey) != null; } catch {} }
+    bootHad.cookie = readCookie(authKey) != null;
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: durableStorage } });
     // Fires once on load (INITIAL_SESSION), then on sign-in, sign-out and token refresh.
     // Supabase calls are deferred out of the callback, as the library recommends.
-    sb.auth.onAuthStateChange((_event, sess) => {
+    sb.auth.onAuthStateChange((event, sess) => {
+      if (event === "INITIAL_SESSION") reportDiag(authKey, sess);
       const prevId = session && session.user.id, nextId = sess && sess.user.id;
-      if (prevId === nextId) { session = sess; return; }
+      if (prevId === nextId) { session = sess; if (!sess) document.body.classList.remove("booting"); return; }
       setTimeout(() => onSession(sess), 0);
     });
   }
