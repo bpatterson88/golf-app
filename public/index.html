@@ -70,10 +70,10 @@ body.baby h1, body.baby h2 { letter-spacing: 0; }
 
 /* clubhouse mode: private members' club. Serif display type, square stationery cards, brass hairlines. */
 body.clubhouse {
-  --bg: #07130d; --panel: #173126; --ink: #fbf8f0; --muted: #b4c6ba; --line: #31503f;
-  --accent: #e6b955; --on-accent: #1b1405;
-  --brass-line: rgba(230,185,85,.62);
-  --birdie: #9ccaa6; --par: #a4c1ce; --bogey: #dfc07f; --double: #d28c5f; --triple: #c25e56;
+  --bg: #0e1d16; --panel: #13251c; --ink: #f2eee3; --muted: #93a99b; --line: #25392e;
+  --accent: #d4a64a; --on-accent: #1b1405;
+  --brass-line: rgba(212,166,74,.42);
+  --birdie: #8fd6a2; --par: #9cc6e8; --bogey: #ecca78; --double: #e48a52; --triple: #e0534d;
   --serif: "Playfair Display", Georgia, "Times New Roman", serif;
   color-scheme: dark;
   background-image:
@@ -902,7 +902,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // SHA-256 of lowercased emails (hashed so emails aren't public in the repo).
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
   const THEMES = ["agent", "clubhouse", "baby"];
-  const THEME_COLORS = { agent: "#050607", clubhouse: "#07130d", baby: "#fff4fa" };
+  const THEME_COLORS = { agent: "#050607", clubhouse: "#0e1d16", baby: "#fff4fa" };
   let theme = "", codename = "";
   const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
