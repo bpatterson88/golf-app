@@ -67,6 +67,23 @@ body.baby {
 }
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
+
+/* clubhouse mode: neutral option in the theme picker */
+body.clubhouse {
+  --bg: #0e1d16; --panel: #15281f; --ink: #f2eee3; --muted: #93a99b; --line: #25392e;
+  --accent: #d4a64a; --on-accent: #1b1405;
+  color-scheme: dark;
+}
+body.clubhouse .card { border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 10px; }
+body.clubhouse h1 { letter-spacing: -0.03em; }
+body.clubhouse h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .16em; color: var(--accent); font-weight: 700; }
+
+/* theme picker */
+.head-actions { display: flex; align-items: center; gap: 2px; position: relative; }
+.theme-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; display: grid; gap: 4px; padding: 6px; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.theme-menu.hidden { display: none; }
+.theme-menu button { background: transparent; color: var(--ink); text-align: left; border-radius: 8px; padding: 9px 12px; font-size: 14px; }
+.theme-menu button[aria-checked="true"] { background: var(--accent); color: var(--on-accent); }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
@@ -224,7 +241,15 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       <h1 data-baby="Baby's First Golf 🍼" data-agent="Golf Ops // Classified">Golf</h1>
       <span class="meta num" id="headMeta">Your rounds and stats</span>
     </div>
-    <button type="button" class="text app-only" id="signOutBtn" data-baby="Nap time 😴" data-agent="Go dark">Sign out</button>
+    <div class="head-actions app-only">
+      <button type="button" class="text" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu">Theme</button>
+      <div class="theme-menu hidden" id="themeMenu" role="menu" aria-label="Theme">
+        <button type="button" role="menuitemradio" data-pick="agent" aria-checked="false">Agent</button>
+        <button type="button" role="menuitemradio" data-pick="clubhouse" aria-checked="false">Clubhouse</button>
+        <button type="button" role="menuitemradio" data-pick="baby" aria-checked="false">Baby 🍼</button>
+      </div>
+      <button type="button" class="text" id="signOutBtn" data-baby="Nap time 😴" data-agent="Go dark">Sign out</button>
+    </div>
   </header>
 
   <section class="card auth auth-only" aria-labelledby="authTitle">
@@ -441,9 +466,11 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   // ---------- render ----------
   function render() {
     const rs = rounds.slice().sort(byDateDesc);
-    $("headMeta").textContent = !session ? "Your rounds and stats" : isBaby
-      ? (rs.length ? `${rs.length} brave wittle round${rs.length === 1 ? "" : "s"} 🧸` : "No rounds yet, and that's okay 💕")
-      : `Agent ${codename} // ${rs.length} mission${rs.length === 1 ? "" : "s"} on file`;
+    const plural = rs.length === 1 ? "" : "s";
+    $("headMeta").textContent = !session ? "Your rounds and stats"
+      : theme === "baby" ? (rs.length ? `${rs.length} brave wittle round${plural} 🧸` : "No rounds yet, and that's okay 💕")
+      : theme === "agent" ? `Agent ${codename} // ${rs.length} mission${plural} on file`
+      : (rs.length ? `${rs.length} round${plural} logged` : "Your rounds and stats");
 
     // tiles
     const h = handicapIndex(rs);
@@ -622,7 +649,9 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   function openSheet(r) {
     resetForm();
     editing = r || null;
-    $("sheetTitle").textContent = r ? (isBaby ? "Fix Your Oopsie 🍼" : "Amend dossier") : (isBaby ? "Tell Us About Your Round, Sweetie 🍼" : "File after-action report");
+    $("sheetTitle").textContent = r
+      ? ({ baby: "Fix Your Oopsie 🍼", agent: "Amend dossier" }[theme] || "Edit round")
+      : ({ baby: "Tell Us About Your Round, Sweetie 🍼", agent: "File after-action report" }[theme] || "Log a round");
     $("saveBtn").textContent = r ? "Save changes" : "Save round";
     if (r) {
       $("course").value = r.course || "";
@@ -833,40 +862,62 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   });
 
   // ---------- baby mode ----------
-  // SHA-256 of lowercased emails that get baby mode (hashed so emails aren't public in the repo).
+  // Default theme for people who haven't picked one: baby for accounts in BABY_HASHES, agent for everyone else.
+  // SHA-256 of lowercased emails (hashed so emails aren't public in the repo).
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
-  let isBaby = false, codename = "";
+  const THEMES = ["agent", "clubhouse", "baby"];
+  const THEME_COLORS = { agent: "#050607", clubhouse: "#0e1d16", baby: "#fff4fa" };
+  let theme = "", codename = "";
   const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
     const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
   }
-  async function applyBaby(sess) {
-    isBaby = false; codename = "";
-    try {
-      if (sess && sess.user.email) {
-        isBaby = BABY_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase()));
-        codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length];
-      }
-    } catch {}
-    const theme = !sess ? "" : isBaby ? "baby" : "agent"; // signed-out page stays neutral
-    document.body.classList.toggle("baby", theme === "baby");
-    document.body.classList.toggle("agent", theme === "agent");
-    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = { baby: "#fff4fa", agent: "#050607" }[theme] || "#ffffff";
-    document.querySelectorAll("[data-baby]").forEach(el => {
+  async function defaultTheme(sess) {
+    try { if (BABY_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase()))) return "baby"; } catch {}
+    return "agent";
+  }
+  // name "" = signed-out neutral look
+  function applyTheme(name) {
+    theme = THEMES.includes(name) ? name : "";
+    for (const t of THEMES) document.body.classList.toggle(t, theme === t);
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = THEME_COLORS[theme] || "#ffffff";
+    document.querySelectorAll("[data-baby], [data-agent]").forEach(el => {
       if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
     });
+    document.querySelectorAll("#themeMenu [data-pick]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.pick === theme)));
+    if (!$("addCard").classList.contains("hidden")) $("sheetTitle").textContent = editing
+      ? ({ baby: "Fix Your Oopsie 🍼", agent: "Amend dossier" }[theme] || "Edit round")
+      : ({ baby: "Tell Us About Your Round, Sweetie 🍼", agent: "File after-action report" }[theme] || "Log a round");
   }
+  function toggleThemeMenu(open) {
+    $("themeMenu").classList.toggle("hidden", !open);
+    $("themeBtn").setAttribute("aria-expanded", String(open));
+  }
+  $("themeBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleThemeMenu($("themeMenu").classList.contains("hidden")); });
+  document.addEventListener("click", (e) => { if (!e.target.closest("#themeMenu")) toggleThemeMenu(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") toggleThemeMenu(false); });
+  $("themeMenu").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-pick]"); if (!b) return;
+    toggleThemeMenu(false);
+    if (b.dataset.pick === theme) return;
+    applyTheme(b.dataset.pick); render();
+    if (!sb || !session) return;
+    const { error } = await sb.from("profiles").upsert({ user_id: session.user.id, theme, updated_at: new Date().toISOString() });
+    if (error) banner("Couldn't save your theme. It will reset next time you sign in.", true);
+  });
 
   // ---------- init ----------
   async function onSession(sess) {
     session = sess;
-    await applyBaby(sess);
-    document.body.classList.toggle("signed-out", !sess);
-    if (!sess) { rounds = []; courses = []; render(); return; }
+    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); rounds = []; courses = []; render(); return; }
+    codename = "";
+    try { codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length]; } catch {}
+    const { data } = await sb.from("profiles").select("player_hint, theme").eq("user_id", sess.user.id).maybeSingle();
+    applyTheme(data && THEMES.includes(data.theme) ? data.theme : await defaultTheme(sess));
+    document.body.classList.remove("signed-out");
     $("headMeta").textContent = sess.user.email || "Your rounds and stats";
-    const { data } = await sb.from("profiles").select("player_hint").eq("user_id", sess.user.id).maybeSingle();
     playerHint = (data && data.player_hint) || "";
     if (!$("player").value) $("player").value = playerHint;
     await loadData();
