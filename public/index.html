@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: white page, soft gray panels, one bright blue accent; summary first, then trend, scoring, records, log. Logging opens as a full-screen sheet. */
 :root {
@@ -68,15 +68,36 @@ body.baby {
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
 
-/* clubhouse mode: neutral option in the theme picker */
+/* clubhouse mode: private members' club. Serif display type, square stationery cards, brass hairlines. */
 body.clubhouse {
-  --bg: #0e1d16; --panel: #15281f; --ink: #f2eee3; --muted: #93a99b; --line: #25392e;
+  --bg: #0e1d16; --panel: #13251c; --ink: #f2eee3; --muted: #93a99b; --line: #25392e;
   --accent: #d4a64a; --on-accent: #1b1405;
+  --brass-line: rgba(212,166,74,.42);
+  --birdie: #86b08f; --par: #8fa9b6; --bogey: #c8aa70; --double: #b97a53; --triple: #9c4b46;
+  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
   color-scheme: dark;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.06) 0 1px, transparent 1px 4px);
 }
-body.clubhouse .card { border: 1px solid var(--line); border-top: 2px solid var(--accent); border-radius: 10px; }
-body.clubhouse h1 { letter-spacing: -0.03em; }
-body.clubhouse h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .16em; color: var(--accent); font-weight: 700; }
+body.clubhouse header { padding-bottom: 18px; border-bottom: 1px solid var(--brass-line); }
+body.clubhouse h1 { font-family: var(--serif); font-weight: 700; font-size: 34px; letter-spacing: 0; }
+body.clubhouse header .meta { text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 600; margin-top: 4px; }
+body.clubhouse h2 { font-family: var(--serif); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .18em; color: var(--accent); }
+body.clubhouse .card { border-radius: 2px; padding: 24px; border: 1px solid var(--line); box-shadow: inset 0 0 0 5px var(--panel), inset 0 0 0 6px var(--brass-line); }
+body.clubhouse .tile .label { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; }
+body.clubhouse .tile .value { font-family: var(--serif); font-weight: 600; letter-spacing: 0; font-variant-numeric: lining-nums tabular-nums; }
+body.clubhouse .tile.main .value { font-size: 72px; line-height: 1; }
+body.clubhouse button { border-radius: 2px; text-transform: uppercase; letter-spacing: .14em; font-size: 13px; }
+body.clubhouse button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px rgba(242,238,227,.35); }
+body.clubhouse button.text, body.clubhouse .toggle-card, body.clubhouse .theme-menu button { text-transform: none; letter-spacing: 0; }
+body.clubhouse .theme-menu button { font-size: 14px; }
+body.clubhouse .seg, body.clubhouse .seg button { border-radius: 2px; }
+body.clubhouse .seg button { font-size: 11px; }
+body.clubhouse .fab { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.18); }
+body.clubhouse input[type=text], body.clubhouse input[type=number], body.clubhouse input[type=date], body.clubhouse input[type=email], body.clubhouse input[type=password] { border-radius: 2px; border-color: var(--line); }
+body.clubhouse label.photo { border-radius: 2px; border-color: var(--brass-line); }
+body.clubhouse .theme-menu, body.clubhouse .banner, body.clubhouse .pill, body.clubhouse .preview { border-radius: 2px; }
 
 /* theme picker */
 .head-actions { display: flex; align-items: center; gap: 2px; position: relative; }
@@ -238,7 +259,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 <main>
   <header>
     <div class="head-text">
-      <h1 data-baby="Baby's First Golf 🍼" data-agent="Golf Ops // Classified">Golf</h1>
+      <h1 data-baby="Baby's First Golf 🍼" data-agent="Golf Ops // Classified" data-clubhouse="The Clubhouse">Golf</h1>
       <span class="meta num" id="headMeta">Your rounds and stats</span>
     </div>
     <div class="head-actions app-only">
@@ -300,7 +321,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   </section>
 
   <section class="app-only card" aria-label="Course records">
-    <div class="card-head"><h2 data-baby="Gold Stars ⭐" data-agent="Best operations by location">Course records</h2></div>
+    <div class="card-head"><h2 data-baby="Gold Stars ⭐" data-agent="Best operations by location" data-clubhouse="Course bests">Course records</h2></div>
     <div class="tbl" id="records"><p class="empty">Your best score at each course will show here.</p></div>
   </section>
 
@@ -371,7 +392,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     </form>
   </div>
 </section>
-<button type="button" class="fab app-only" id="toggleAdd" data-baby="+ Add a round 🍼" data-agent="+ New mission">+ Log round</button>
+<button type="button" class="fab app-only" id="toggleAdd" data-baby="+ Add a round 🍼" data-agent="+ New mission" data-clubhouse="Post a score">+ Log round</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -470,6 +491,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     $("headMeta").textContent = !session ? "Your rounds and stats"
       : theme === "baby" ? (rs.length ? `${rs.length} brave wittle round${plural} 🧸` : "No rounds yet, and that's okay 💕")
       : theme === "agent" ? `Agent ${codename} // ${rs.length} mission${plural} on file`
+      : theme === "clubhouse" ? (rs.length ? `Member · ${rs.length} round${plural} posted` : "Member · No rounds posted yet")
       : (rs.length ? `${rs.length} round${plural} logged` : "Your rounds and stats");
 
     // tiles
@@ -882,7 +904,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     theme = THEMES.includes(name) ? name : "";
     for (const t of THEMES) document.body.classList.toggle(t, theme === t);
     const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = THEME_COLORS[theme] || "#ffffff";
-    document.querySelectorAll("[data-baby], [data-agent]").forEach(el => {
+    document.querySelectorAll("[data-baby], [data-agent], [data-clubhouse]").forEach(el => {
       if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
     });
