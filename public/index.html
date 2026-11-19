@@ -246,6 +246,18 @@ details[open] summary { margin-bottom: 4px; }
 .round-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .round-foot button { margin-top: 2px; }
 .status:empty { display: none; }
+
+/* chat */
+.chat-log { display: grid; gap: 10px; max-height: 420px; overflow-y: auto; }
+.chat-log:empty { display: none; }
+.msg { padding: 10px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; max-width: 88%; }
+.msg.user { justify-self: end; background: var(--accent); color: var(--on-accent); }
+.msg.assistant { justify-self: start; background: var(--bg); }
+.msg.pending { color: var(--muted); }
+.chat-form { display: flex; gap: 8px; align-items: flex-end; }
+.chat-form textarea { flex: 1; min-width: 0; font: 16px/1.4 var(--font); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); resize: none; min-height: 48px; max-height: 140px; }
+body.clubhouse .msg, body.clubhouse .chat-form textarea { border-radius: 2px; }
+body.agent .msg, body.agent .chat-form textarea { border-radius: 4px; }
 main, .card, .rounds, .round { grid-template-columns: minmax(0, 1fr); }
 .card > *, .round > * { min-width: 0; }
 .round-actions { display: flex; gap: 4px; }
@@ -326,6 +338,17 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     <div class="tile"><span class="label">9-hole avg</span><span class="value num" id="avg9">–</span><span class="sub" id="avg9Sub">no rounds</span></div>
     <div class="tile"><span class="label">Best 18</span><span class="value num" id="best18">–</span><span class="sub" id="best18Sub">&nbsp;</span></div>
     <div class="tile"><span class="label">Best 9</span><span class="value num" id="best9">–</span><span class="sub" id="best9Sub">&nbsp;</span></div>
+  </section>
+
+  <section class="app-only card" aria-label="Ask Claude">
+    <div class="card-head"><h2 data-baby="Ask Coach Claude 🧸" data-agent="Debrief with HQ" data-clubhouse="Ask the pro">Ask Claude</h2></div>
+    <div class="chat-log" id="chatLog" aria-live="polite"></div>
+    <form id="chatForm" class="chat-form">
+      <label for="chatInput" class="sr-only">Message</label>
+      <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Ask about your scores"></textarea>
+      <button type="submit" id="chatSend">Send</button>
+    </form>
+    <div class="status" id="chatStatus" aria-live="polite"></div>
   </section>
 
   <section class="app-only card" aria-label="Score trend">
@@ -961,7 +984,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     let cb = false;
     try { cb = !!(sess && sess.user.email) && COLORBLIND_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
     document.body.classList.toggle("cb", cb);
-    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); document.body.classList.remove("booting"); rounds = []; courses = []; render(); return; }
+    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); document.body.classList.remove("booting"); rounds = []; courses = []; chat = []; renderChat(); render(); return; }
     codename = "";
     try { codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length]; } catch {}
     const { data } = await sb.from("profiles").select("player_hint, theme").eq("user_id", sess.user.id).maybeSingle();
@@ -1003,6 +1026,47 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password");
   });
   $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); });
+
+  // ---------- chat ----------
+  let chat = [], chatBusy = false;
+  function renderChat() {
+    const log = $("chatLog");
+    log.innerHTML = chat.map(m => `<div class="msg ${m.role}${m.pending ? " pending" : ""}">${esc(m.content)}</div>`).join("");
+    log.scrollTop = log.scrollHeight;
+  }
+  function growChatInput() { const t = $("chatInput"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 140) + "px"; }
+  $("chatInput").addEventListener("input", growChatInput);
+  $("chatInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("chatForm").requestSubmit(); }
+  });
+  $("chatForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("chatInput").value.trim();
+    const st = $("chatStatus");
+    if (!text || chatBusy || !sb || !session) return;
+    chatBusy = true; $("chatSend").disabled = true; st.textContent = ""; st.classList.remove("err");
+    chat.push({ role: "user", content: text });
+    $("chatInput").value = ""; growChatInput();
+    chat.push({ role: "assistant", content: "…", pending: true });
+    renderChat();
+    try {
+      const { data: { session: cur } } = await sb.auth.getSession();
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${cur ? cur.access_token : ""}` },
+        body: JSON.stringify({ messages: chat.filter(m => !m.pending).slice(-12), theme }),
+      });
+      const payload = await resp.json().catch(() => null);
+      if (!resp.ok || !payload || !payload.reply) throw new Error((payload && payload.error) || "Couldn't get an answer. Try again.");
+      chat[chat.length - 1] = { role: "assistant", content: payload.reply };
+    } catch (err) {
+      chat.splice(-2, 2);                 // drop the failed question and the placeholder
+      $("chatInput").value = text; growChatInput();
+      st.classList.add("err"); st.textContent = err.message || "Couldn't get an answer. Try again.";
+    } finally {
+      chatBusy = false; $("chatSend").disabled = false; renderChat();
+    }
+  });
 
   // ---------- durable sign-in storage ----------
   // Supabase keeps the session under one key. Save it in localStorage AND a long-lived cookie

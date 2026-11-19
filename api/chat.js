@@ -1,0 +1,156 @@
+// Lets a signed-in person ask Claude about their own scores.
+// 1. Checks the caller is signed in (their Supabase session token).
+// 2. Enforces a per-person limit on messages in the last 24 hours.
+// 3. Loads that person's rounds with their own token (row-level security means only theirs).
+// 4. Sends the rounds and the recent conversation to Claude and returns the reply.
+
+const MAX_MESSAGES = 12;      // recent turns sent to Claude
+const MAX_CHARS = 2000;       // per message
+const THEMES = new Set(["agent", "clubhouse", "baby"]);
+
+const TONES = {
+  agent: "Tone: a dry, clipped intelligence handler debriefing a field agent. Light mission language (rounds are missions, the course is the field) is fine, but keep it understated and keep the golf analysis plain and accurate.",
+  baby: "Tone: very gentle and encouraging, like a kind coach for a beginner. Celebrate small wins, soften bad news, never be mean. Keep it playful but still accurate.",
+  clubhouse: "Tone: an understated, knowledgeable club professional. Calm, direct, a little dry. No golf clichés.",
+};
+
+function fail(res, status, code, message) {
+  res.status(status).json({ error: message, code });
+}
+
+function safeJson(s) {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+async function getUser(supabaseUrl, anonKey, token) {
+  const r = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) return null;
+  const u = await r.json();
+  return u && u.id ? u : null;
+}
+
+async function countRecentMessages(supabaseUrl, anonKey, token) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const r = await fetch(
+    `${supabaseUrl}/rest/v1/chat_messages?select=id&created_at=gte.${encodeURIComponent(since)}`,
+    { headers: { apikey: anonKey, Authorization: `Bearer ${token}`, Prefer: "count=exact", Range: "0-0" } },
+  );
+  if (!r.ok) throw new Error(`count failed: ${r.status}`);
+  const total = Number((r.headers.get("content-range") || "").split("/")[1]);
+  return Number.isFinite(total) ? total : 0;
+}
+
+async function logMessage(supabaseUrl, anonKey, token) {
+  const r = await fetch(`${supabaseUrl}/rest/v1/chat_messages`, {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: "{}",
+  });
+  if (!r.ok) throw new Error(`log failed: ${r.status}`);
+}
+
+async function loadRounds(supabaseUrl, anonKey, token) {
+  const cols = "played_on,course,tees,holes,score,rating,slope,putts,hole_scores,pars";
+  const r = await fetch(`${supabaseUrl}/rest/v1/rounds?select=${cols}&order=played_on.asc&limit=500`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) throw new Error(`rounds failed: ${r.status}`);
+  return r.json();
+}
+
+function describeRounds(rounds) {
+  if (!rounds.length) return "This player has no rounds logged yet.";
+  const arr = (a) => (Array.isArray(a) ? a.map(v => (v == null ? "-" : v)).join(" ") : "-");
+  const lines = rounds.map(r => [
+    r.played_on,
+    `${r.course}${r.tees ? ` (${r.tees} tees)` : ""}`,
+    `${r.holes} holes`,
+    `score ${r.score}`,
+    `rating ${r.rating ?? "-"}`,
+    `slope ${r.slope ?? "-"}`,
+    `putts ${r.putts ?? "-"}`,
+    `hole scores ${arr(r.hole_scores)}`,
+    `pars ${arr(r.pars)}`,
+  ].join(" | "));
+  return `This player's rounds, oldest first (${rounds.length} total; "-" means not recorded):\n${lines.join("\n")}`;
+}
+
+function systemPrompt(rounds, theme) {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: process.env.APP_TIMEZONE || "America/Los_Angeles" });
+  return [
+    "You are the assistant inside a small golf score-tracking app used by a few friends. You talk with one signed-in player about their own golf scores.",
+    `Today's date is ${today}.`,
+    "Answer from the round data below. Do arithmetic carefully. If the data doesn't contain what's needed (for example no course rating or slope, or no hole-by-hole scores), say so plainly instead of guessing.",
+    "The app's handicap index follows the World Handicap System and only counts 18-hole rounds that have both a course rating and slope.",
+    "You can only see this player's rounds, not anyone else's.",
+    "Keep answers short: usually 2 to 5 sentences, or a short list when comparing things. Plain text only, no headings or tables.",
+    TONES[theme] || TONES.clubhouse,
+    "",
+    describeRounds(rounds),
+  ].join("\n");
+}
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return fail(res, 405, "method_not_allowed", "Use POST.");
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY } = process.env;
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
+  const limit = Number(process.env.DAILY_CHAT_LIMIT) || 50;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return fail(res, 500, "not_configured", "Server is missing Supabase settings.");
+  if (!ANTHROPIC_API_KEY) return fail(res, 503, "chat_off", "Chat isn't set up on this server.");
+
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return fail(res, 401, "unauthorized", "Sign in to chat.");
+  let user;
+  try { user = await getUser(SUPABASE_URL, SUPABASE_ANON_KEY, token); } catch { user = null; }
+  if (!user) return fail(res, 401, "unauthorized", "Your sign-in has expired. Sign in again.");
+
+  // Validate the conversation.
+  const body = typeof req.body === "string" ? safeJson(req.body) : req.body;
+  const raw = body && Array.isArray(body.messages) ? body.messages.slice(-MAX_MESSAGES) : null;
+  const messages = raw && raw
+    .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .map(m => ({ role: m.role, content: m.content.slice(0, MAX_CHARS) }));
+  while (messages && messages.length && messages[0].role !== "user") messages.shift();
+  if (!messages || !messages.length || messages[messages.length - 1].role !== "user") return fail(res, 400, "bad_request", "Send a message.");
+  const theme = THEMES.has(body.theme) ? body.theme : "clubhouse";
+
+  // Daily limit.
+  try {
+    const used = await countRecentMessages(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+    if (used >= limit) return fail(res, 429, "daily_limit", `You've used all ${limit} messages for the last 24 hours. Try again tomorrow.`);
+    await logMessage(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+  } catch (e) {
+    console.error("chat limit check", e);
+    return fail(res, 500, "limit_check_failed", "Couldn't check your message limit. Try again.");
+  }
+
+  let rounds;
+  try { rounds = await loadRounds(SUPABASE_URL, SUPABASE_ANON_KEY, token); }
+  catch (e) { console.error("chat rounds", e); return fail(res, 500, "rounds_failed", "Couldn't load your rounds. Try again."); }
+
+  let reply;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(rounds, theme), messages }),
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok) {
+      console.error("anthropic error", r.status, data);
+      if (r.status === 429 || r.status === 529) return fail(res, 503, "busy", "Claude is busy right now. Try again in a minute.");
+      return fail(res, 502, "upstream_error", "Couldn't get an answer. Try again.");
+    }
+    if (data.stop_reason === "max_tokens") console.warn("chat reply cut off at max_tokens");
+    reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  } catch (e) {
+    console.error("anthropic fetch", e);
+    return fail(res, 502, "upstream_error", "Couldn't get an answer. Try again.");
+  }
+  if (!reply) return fail(res, 502, "empty_reply", "Couldn't get an answer. Try again.");
+  res.status(200).json({ reply });
+}

@@ -72,3 +72,16 @@ create index if not exists photo_reads_user_idx on public.photo_reads (user_id, 
 alter table public.photo_reads enable row level security;
 create policy "photo_reads: read own"   on public.photo_reads for select using (auth.uid() = user_id);
 create policy "photo_reads: insert own" on public.photo_reads for insert with check (auth.uid() = user_id);
+
+-- Chat message log (used for the daily chat limit) -----------------------
+-- Same rules as photo_reads: people can add and read their own entries, never delete them.
+create table if not exists public.chat_messages (
+  id         bigint generated always as identity primary key,
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index if not exists chat_messages_user_idx on public.chat_messages (user_id, created_at desc);
+
+alter table public.chat_messages enable row level security;
+create policy "chat_messages: read own"   on public.chat_messages for select using (auth.uid() = user_id);
+create policy "chat_messages: insert own" on public.chat_messages for insert with check (auth.uid() = user_id);

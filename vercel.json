@@ -1,6 +1,11 @@
 {
   "outputDirectory": "public",
   "functions": {
-    "api/read-scorecard.js": { "maxDuration": 60 }
+    "api/read-scorecard.js": {
+      "maxDuration": 60
+    },
+    "api/chat.js": {
+      "maxDuration": 60
+    }
   }
 }

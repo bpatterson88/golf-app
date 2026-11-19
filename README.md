@@ -43,6 +43,7 @@ Tip: set a monthly spend limit in the console as a backstop.
 | `SUPABASE_ANON_KEY` | your anon / publishable key |
 | `ANTHROPIC_API_KEY` | your `sk-ant-…` key |
 | `DAILY_PHOTO_LIMIT` | optional, default `10` (photo reads per person per 24 hours) |
+| `DAILY_CHAT_LIMIT` | optional, default `50` (chat messages per person per 24 hours) |
 | `ANTHROPIC_MODEL` | optional, default `claude-sonnet-5-5` |
 
 4. Click **Deploy**. Note your site address, e.g. `https://golf-scores.vercel.app`.
