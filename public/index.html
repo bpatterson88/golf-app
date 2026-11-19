@@ -1054,7 +1054,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${cur ? cur.access_token : ""}` },
-        body: JSON.stringify({ messages: chat.filter(m => !m.pending).slice(-12), theme }),
+        body: JSON.stringify({ messages: chat.filter(m => !m.pending).slice(-12), theme, codename }),
       });
       const payload = await resp.json().catch(() => null);
       if (!resp.ok || !payload || !payload.reply) throw new Error((payload && payload.error) || "Couldn't get an answer. Try again.");

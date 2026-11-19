@@ -8,10 +8,11 @@ const MAX_MESSAGES = 12;      // recent turns sent to Claude
 const MAX_CHARS = 2000;       // per message
 const THEMES = new Set(["agent", "clubhouse", "baby"]);
 
+// The voice is part of the theme: commit to it in every reply. Numbers and facts stay exact.
 const TONES = {
-  agent: "Tone: a dry, clipped intelligence handler debriefing a field agent. Light mission language (rounds are missions, the course is the field) is fine, but keep it understated and keep the golf analysis plain and accurate.",
-  baby: "Tone: very gentle and encouraging, like a kind coach for a beginner. Celebrate small wins, soften bad news, never be mean. Keep it playful but still accurate.",
-  clubhouse: "Tone: an understated, knowledgeable club professional. Calm, direct, a little dry. No golf clichés.",
+  agent: (codename) => `Voice: you are HQ, a cold, clipped intelligence handler debriefing a field operative. Address them as ${codename ? `Agent ${codename}` : "Agent"}. Fully commit to the spy framing in every reply: rounds are missions or operations, courses are the field or the target site, holes are objectives, bad holes are compromised objectives, birdies are clean kills, the scorecard is the dossier or the file. Short, terse sentences. Dry, faintly menacing professionalism. Occasionally open with a status line like "Debrief follows." or close with an order like "Report back after your next operation." Never break character, never use emoji.`,
+  baby: () => `Voice: you are a sweet, gushing helper talking to a little baby golfer, matching the app's baby theme. Fully commit in every reply: baby talk ("wittle", "tummy-time", "itty-bitty", "big boy/big girl"), lots of praise, gentle cooing, and a few emoji like 🍼 🧸 💕 ⭐. Treat every bad score as a brave try and every good one as a huge milestone. Teasing must stay affectionate, never mean. The numbers you give must still be correct.`,
+  clubhouse: () => `Voice: you are the head professional at an old private members' club, speaking to a member. Fully commit in every reply: polished, dry, quietly confident, with a touch of old-club formality ("I'd suggest", "a respectable effort", "the back nine was less kind to you"). Understated wit, never gushing, no exclamation marks, no emoji, no golf-pun clichés.`,
 };
 
 function fail(res, status, code, message) {
@@ -77,7 +78,7 @@ function describeRounds(rounds) {
   return `This player's rounds, oldest first (${rounds.length} total; "-" means not recorded):\n${lines.join("\n")}`;
 }
 
-function systemPrompt(rounds, theme) {
+function systemPrompt(rounds, theme, codename) {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: process.env.APP_TIMEZONE || "America/Los_Angeles" });
   return [
     "You are the assistant inside a small golf score-tracking app used by a few friends. You talk with one signed-in player about their own golf scores.",
@@ -86,7 +87,8 @@ function systemPrompt(rounds, theme) {
     "The app's handicap index follows the World Handicap System and only counts 18-hole rounds that have both a course rating and slope.",
     "You can only see this player's rounds, not anyone else's.",
     "Keep answers short: usually 2 to 5 sentences, or a short list when comparing things. Plain text only, no headings or tables.",
-    TONES[theme] || TONES.clubhouse,
+    "Stay in the voice below for the whole conversation, including when giving bad news or saying the data can't answer something.",
+    (TONES[theme] || TONES.clubhouse)(codename),
     "",
     describeRounds(rounds),
   ].join("\n");
@@ -117,6 +119,7 @@ export default async function handler(req, res) {
   while (messages && messages.length && messages[0].role !== "user") messages.shift();
   if (!messages || !messages.length || messages[messages.length - 1].role !== "user") return fail(res, 400, "bad_request", "Send a message.");
   const theme = THEMES.has(body.theme) ? body.theme : "clubhouse";
+  const codename = typeof body.codename === "string" ? body.codename.replace(/[^A-Za-z ]/g, "").slice(0, 20) : "";
 
   // Daily limit.
   try {
@@ -137,7 +140,7 @@ export default async function handler(req, res) {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(rounds, theme), messages }),
+      body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(rounds, theme, codename), messages }),
     });
     const data = await r.json().catch(() => null);
     if (!r.ok) {
