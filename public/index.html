@@ -253,9 +253,15 @@ details[open] summary { margin-bottom: 4px; }
 .msg { padding: 10px 13px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; max-width: 88%; }
 .msg.user { justify-self: end; background: var(--accent); color: var(--on-accent); }
 .msg.assistant { justify-self: start; background: var(--bg); }
-.msg.pending { color: var(--muted); }
+.msg.pending { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
+.msg.pending i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: chatDot 1.2s ease-in-out infinite; }
+.msg.pending i:nth-child(2) { animation-delay: .15s; }
+.msg.pending i:nth-child(3) { animation-delay: .3s; }
+@keyframes chatDot { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .msg.pending i { animation: none; opacity: .6; } }
 .chat-form { display: flex; gap: 8px; align-items: flex-end; }
-.chat-form textarea { flex: 1; min-width: 0; font: 16px/1.4 var(--font); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); resize: none; min-height: 48px; max-height: 140px; }
+.chat-form textarea { flex: 1; min-width: 0; font: 16px/1.4 var(--font); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); resize: none; height: 48px; min-height: 48px; max-height: 140px; display: block; }
+.chat-form button { flex: none; height: 48px; padding-top: 0; padding-bottom: 0; }
 body.clubhouse .msg, body.clubhouse .chat-form textarea { border-radius: 2px; }
 body.agent .msg, body.agent .chat-form textarea { border-radius: 4px; }
 main, .card, .rounds, .round { grid-template-columns: minmax(0, 1fr); }
@@ -1031,10 +1037,12 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   let chat = [], chatBusy = false;
   function renderChat() {
     const log = $("chatLog");
-    log.innerHTML = chat.map(m => `<div class="msg ${m.role}${m.pending ? " pending" : ""}">${esc(m.content)}</div>`).join("");
+    log.innerHTML = chat.map(m => m.pending && !m.content
+      ? `<div class="msg assistant pending" aria-label="Claude is thinking"><i></i><i></i><i></i></div>`
+      : `<div class="msg ${m.role}">${esc(m.content)}</div>`).join("");
     log.scrollTop = log.scrollHeight;
   }
-  function growChatInput() { const t = $("chatInput"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 140) + "px"; }
+  function growChatInput() { const t = $("chatInput"); t.style.height = "48px"; t.style.height = Math.min(Math.max(t.scrollHeight + 2, 48), 140) + "px"; }
   $("chatInput").addEventListener("input", growChatInput);
   $("chatInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("chatForm").requestSubmit(); }
@@ -1047,22 +1055,50 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     chatBusy = true; $("chatSend").disabled = true; st.textContent = ""; st.classList.remove("err");
     chat.push({ role: "user", content: text });
     $("chatInput").value = ""; growChatInput();
-    chat.push({ role: "assistant", content: "…", pending: true });
+    const reply = { role: "assistant", content: "", pending: true };
+    chat.push(reply);
     renderChat();
     try {
       const { data: { session: cur } } = await sb.auth.getSession();
       const resp = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${cur ? cur.access_token : ""}` },
-        body: JSON.stringify({ messages: chat.filter(m => !m.pending).slice(-12), theme, codename }),
+        body: JSON.stringify({ messages: chat.filter(m => m !== reply).slice(-12), theme, codename }),
       });
-      const payload = await resp.json().catch(() => null);
-      if (!resp.ok || !payload || !payload.reply) throw new Error((payload && payload.error) || "Couldn't get an answer. Try again.");
-      chat[chat.length - 1] = { role: "assistant", content: payload.reply };
+      if (!resp.ok || !resp.body) {
+        const payload = await resp.json().catch(() => null);
+        throw new Error((payload && payload.error) || "Couldn't get an answer. Try again.");
+      }
+      // Read the streamed reply: one JSON object per line.
+      const reader = resp.body.getReader(), decoder = new TextDecoder();
+      let buf = "", finished = false;
+      const handle = (line) => {
+        if (!line.trim()) return;
+        let msg; try { msg = JSON.parse(line); } catch { return; }
+        if (msg.t) { reply.content += msg.t; renderChat(); }
+        else if (msg.error) throw new Error(msg.error);
+        else if (msg.done) finished = true;
+      };
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let cut;
+        while ((cut = buf.indexOf("\n")) !== -1) { handle(buf.slice(0, cut)); buf = buf.slice(cut + 1); }
+      }
+      handle(buf);
+      if (!finished || !reply.content.trim()) throw new Error("The answer was cut off. Try again.");
+      reply.pending = false;
     } catch (err) {
-      chat.splice(-2, 2);                 // drop the failed question and the placeholder
-      $("chatInput").value = text; growChatInput();
-      st.classList.add("err"); st.textContent = err.message || "Couldn't get an answer. Try again.";
+      if (reply.content.trim()) {
+        // Keep what arrived; just flag that it stopped early.
+        reply.pending = false;
+        st.classList.add("err"); st.textContent = err.message || "The answer was cut off. Try again.";
+      } else {
+        chat.splice(-2, 2);               // drop the failed question and the placeholder
+        $("chatInput").value = text; growChatInput();
+        st.classList.add("err"); st.textContent = err.message || "Couldn't get an answer. Try again.";
+      }
     } finally {
       chatBusy = false; $("chatSend").disabled = false; renderChat();
     }

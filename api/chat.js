@@ -135,25 +135,62 @@ export default async function handler(req, res) {
   try { rounds = await loadRounds(SUPABASE_URL, SUPABASE_ANON_KEY, token); }
   catch (e) { console.error("chat rounds", e); return fail(res, 500, "rounds_failed", "Couldn't load your rounds. Try again."); }
 
-  let reply;
+  // Ask Claude with streaming on, and pass the reply text through as it arrives.
+  // Response body is newline-delimited JSON: {"t":"text chunk"} lines, then {"done":true} or {"error":"..."}.
+  let upstream;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 16000, system: systemPrompt(rounds, theme, codename), messages }),
+      body: JSON.stringify({ model, max_tokens: 16000, stream: true, system: systemPrompt(rounds, theme, codename), messages }),
     });
-    const data = await r.json().catch(() => null);
-    if (!r.ok) {
-      console.error("anthropic error", r.status, data);
-      if (r.status === 429 || r.status === 529) return fail(res, 503, "busy", "Claude is busy right now. Try again in a minute.");
-      return fail(res, 502, "upstream_error", "Couldn't get an answer. Try again.");
-    }
-    if (data.stop_reason === "max_tokens") console.warn("chat reply cut off at max_tokens");
-    reply = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
   } catch (e) {
     console.error("anthropic fetch", e);
     return fail(res, 502, "upstream_error", "Couldn't get an answer. Try again.");
   }
-  if (!reply) return fail(res, 502, "empty_reply", "Couldn't get an answer. Try again.");
-  res.status(200).json({ reply });
+  if (!upstream.ok || !upstream.body) {
+    const data = await upstream.json().catch(() => null);
+    console.error("anthropic error", upstream.status, data);
+    if (upstream.status === 429 || upstream.status === 529) return fail(res, 503, "busy", "Claude is busy right now. Try again in a minute.");
+    return fail(res, 502, "upstream_error", "Couldn't get an answer. Try again.");
+  }
+
+  res.status(200);
+  res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("X-Accel-Buffering", "no");
+  const send = (obj) => res.write(JSON.stringify(obj) + "\n");
+
+  let sentText = false, failed = false;
+  try {
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let cut;
+      while ((cut = buf.indexOf("\n\n")) !== -1) {
+        const event = buf.slice(0, cut); buf = buf.slice(cut + 2);
+        const line = event.split("\n").find(l => l.startsWith("data:"));
+        if (!line) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta" && ev.delta.text) {
+          send({ t: ev.delta.text }); sentText = true;
+        } else if (ev.type === "message_delta" && ev.delta && ev.delta.stop_reason === "max_tokens") {
+          console.warn("chat reply cut off at max_tokens");
+        } else if (ev.type === "error") {
+          console.error("anthropic stream error", ev.error);
+          failed = true;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("anthropic stream", e);
+    failed = true;
+  }
+  if (failed || !sentText) send({ error: sentText ? "The answer was cut off. Try again." : "Couldn't get an answer. Try again." });
+  else send({ done: true });
+  res.end();
 }
