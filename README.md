@@ -74,6 +74,12 @@ Open the site in Safari (iPhone) or Chrome (Android) and choose **Share → Add 
 
 ---
 
+## Tagging other players
+
+Run `supabase/migrations-tagging.sql` once in the SQL Editor. It creates the player list (seeded with the current four players), learned row labels, tagged scores waiting for approval, and a private `scorecards` photo bucket. When someone joins later, add them to `public.players` with their name and any initials they write on cards.
+
+When a photo is read, Claude reads every player row and suggests who each row belongs to. The uploader confirms in "Who's who", their own row is saved, and each tagged player sees the score under "Tagged rounds" to accept, edit or reject. Tagged players can view the scorecard photo.
+
 ## How privacy and limits work
 
 - Each person can only see and change their own rounds. This is enforced by the database's row-level security rules in `schema.sql`, not just by the page.

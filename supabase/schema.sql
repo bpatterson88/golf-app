@@ -85,3 +85,6 @@ create index if not exists chat_messages_user_idx on public.chat_messages (user_
 alter table public.chat_messages enable row level security;
 create policy "chat_messages: read own"   on public.chat_messages for select using (auth.uid() = user_id);
 create policy "chat_messages: insert own" on public.chat_messages for insert with check (auth.uid() = user_id);
+
+-- Tagging players on a scorecard (player list, learned row labels, tagged scores,
+-- scorecard photo storage): see migrations-tagging.sql in this folder.

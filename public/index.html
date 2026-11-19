@@ -247,6 +247,25 @@ details[open] summary { margin-bottom: 4px; }
 .round-foot button { margin-top: 2px; }
 .status:empty { display: none; }
 
+/* who's who on a multi-player card */
+.rows-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; }
+.rows-panel .meta { margin: 0; }
+.prow { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+.prow .who { font-weight: 700; }
+.prow .who .num { font-weight: 800; margin-left: 6px; }
+.prow .pholes { grid-column: 1 / -1; font-size: 13px; color: var(--muted); letter-spacing: .03em; }
+.prow select { font: 15px var(--font); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 170px; }
+body.clubhouse .rows-panel, body.clubhouse .prow select { border-radius: 2px; }
+body.agent .rows-panel, body.agent .prow select { border-radius: 4px; }
+
+/* tagged rounds inbox */
+.tag-item { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.tag-item:first-child { padding-top: 0; border-top: 0; }
+.tag-item .tag-score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.tag-item .tag-score .num.big { font-size: 26px; font-weight: 800; }
+.tag-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tag-photo { width: 100%; border-radius: 10px; display: block; }
+
 /* chat */
 .chat-log { display: grid; gap: 10px; max-height: 420px; overflow-y: auto; }
 .chat-log:empty { display: none; }
@@ -334,6 +353,12 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   <div id="banner" class="banner hidden" role="status"></div>
 
+  <section class="app-only card hidden" id="inboxCard" aria-label="Tagged rounds">
+    <div class="card-head"><h2 data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Cards to attest">Tagged rounds</h2></div>
+    <div id="inboxList"></div>
+    <div class="status" id="inboxStatus" aria-live="polite"></div>
+  </section>
+
   <section class="app-only card tiles" aria-label="Summary">
     <div class="tile main">
       <span class="label" data-baby="Handicap index (it's just a number 💕)" data-agent="Lethality index">Handicap index</span>
@@ -403,9 +428,9 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       <div><strong>Reading your scorecard…</strong><span class="meta num" id="readerTime">Usually 10–40 seconds</span></div>
     </div>
     <div id="readStatus" class="status" aria-live="polite"></div>
-    <div class="field">
-      <label for="player">Your row on the card</label>
-      <input type="text" id="player" placeholder="e.g. B, or second row">
+    <div class="rows-panel hidden" id="rowsPanel">
+      <div><strong>Who's who on this card</strong><p class="meta">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
+      <div id="rowsList"></div>
     </div>
     <form id="roundForm" autocomplete="off">
       <div class="field">
@@ -458,10 +483,15 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   const fromCourse = (c) => ({ name: c.name, tees: c.tees || "", holes: c.holes, rating: c.rating == null ? null : Number(c.rating), slope: c.slope, pars: Array.isArray(c.pars) ? c.pars : null });
   async function loadData() {
     if (!sb || !session) return;
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       sb.from("rounds").select("*").order("played_on", { ascending: false }).limit(2000),
       sb.from("courses").select("*"),
+      sb.from("players").select("user_id, name"),
+      sb.from("pending_scores").select("*").eq("to_user", session.user.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
+    players = r3.error ? [] : (r3.data || []).filter(p => p.name);
+    pending = r4.error ? [] : (r4.data || []);
+    renderInbox();
     if (r1.error) { banner("Couldn't load your rounds. Check your connection and reload.", true); return; }
     banner("");
     rounds = r1.data.map(fromRound).filter(r => r.course && Number.isFinite(r.score));
@@ -471,7 +501,12 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   let rounds = [], courses = [];
   let saving = false;
   let formHoles = 18, chartHoles = 18, chartChosen = false;
-  let playerHint = "";
+  let players = [], pending = [];                  // player list; tagged rounds waiting for me
+  let cardRows = [], rowAssign = [], cardPhoto = null, readId = 0, tagsSentFor = 0;
+  let editingPending = null;
+  const myId = () => (session && session.user ? session.user.id : "");
+  const playerName = (id) => { const p = players.find(x => x.user_id === id); return p ? p.name : "Someone"; };
+  const normLabel = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 40);
   let editing = null, reading = false;
   const openCards = new Set();
   const holesOf = (r) => (r.holes === 9 ? 9 : 18);
@@ -715,19 +750,32 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   function resetForm() {
     $("roundForm").reset(); $("date").value = todayStr();
     $("holeGrid").innerHTML = "";
-    $("player").value = playerHint; setFormHoles(18);
+    setFormHoles(18);
+    cardRows = []; rowAssign = []; cardPhoto = null; renderRows();
+    document.querySelector("label.photo").classList.remove("hidden");
     $("preview").classList.add("hidden"); $("preview").removeAttribute("src");
     $("photoLabel").textContent = "Add scorecard photo";
     $("readStatus").textContent = ""; $("readStatus").classList.remove("err");
     $("formStatus").textContent = "";
   }
-  function openSheet(r) {
-    resetForm();
-    editing = r || null;
-    $("sheetTitle").textContent = r
+  function sheetTitleText() {
+    if (editingPending) return { baby: "Is This Your Round? 🍼", agent: "Verify intel", clubhouse: "Attest card" }[theme] || "Review tagged round";
+    return editing
       ? ({ baby: "Fix Your Oopsie 🍼", agent: "Amend dossier" }[theme] || "Edit round")
       : ({ baby: "Tell Us About Your Round, Sweetie 🍼", agent: "File after-action report" }[theme] || "Log a round");
-    $("saveBtn").textContent = r ? "Save changes" : "Save round";
+  }
+  // r: a saved round to edit. pend: a tagged round to review before accepting.
+  function openSheet(r, pend) {
+    resetForm();
+    editing = r || null;
+    editingPending = pend || null;
+    $("sheetTitle").textContent = sheetTitleText();
+    $("saveBtn").textContent = pend ? "Accept round" : r ? "Save changes" : "Save round";
+    if (pend) {
+      document.querySelector("label.photo").classList.add("hidden");
+      r = { course: pend.course, date: pend.played_on, tees: pend.tees, holes: pend.holes, holeScores: pend.hole_scores, pars: pend.pars,
+            score: pend.score, rating: pend.rating == null ? null : Number(pend.rating), slope: pend.slope, putts: pend.putts };
+    }
     if (r) {
       $("course").value = r.course || "";
       $("date").value = r.date || todayStr();
@@ -745,7 +793,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     document.body.style.overflow = "hidden"; $("toggleAdd").classList.add("hidden");
   }
   $("toggleAdd").addEventListener("click", () => openSheet(null));
-  function closeSheet() { editing = null; $("addCard").classList.add("hidden"); document.body.style.overflow = ""; $("toggleAdd").classList.remove("hidden"); }
+  function closeSheet() { editing = null; editingPending = null; $("addCard").classList.add("hidden"); document.body.style.overflow = ""; $("toggleAdd").classList.remove("hidden"); }
   $("cancelBtn").addEventListener("click", closeSheet);
   $("closeAdd").addEventListener("click", closeSheet);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("addCard").classList.contains("hidden")) closeSheet(); });
@@ -769,45 +817,200 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   $("roundForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (saving || reading) return;
-    if (!sb || !session) { $("formStatus").textContent = "Sign in to save rounds."; return; }
+    const st = $("formStatus");
+    if (!sb || !session) { st.textContent = "Sign in to save rounds."; return; }
+    const me = myId();
     const course = $("course").value.trim();
     const score = parseInt($("score").value, 10);
     const rating = num($("rating").value), slope = num($("slope").value);
     const putts = $("putts").value === "" ? null : parseInt($("putts").value, 10);
     const tees = $("tees").value.trim();
     const date = $("date").value || todayStr();
-    if (!course || !Number.isFinite(score)) { $("formStatus").textContent = "Enter a course name and total score."; return; }
-    if ((rating == null) !== (slope == null)) { $("formStatus").textContent = "Enter both course rating and slope, or leave both blank."; return; }
-    const holeScores = readHoleInputs("hs"), pars = readHoleInputs("hp");
-    if (holeScores.every(v => v != null)) {
-      const sum = holeScores.reduce((a, b) => a + b, 0);
-      if (sum !== score) { $("formStatus").textContent = `Hole scores add up to ${sum}, but the total says ${score}. Fix one before saving.`; return; }
-    }
-    saving = true; $("saveBtn").disabled = true; $("formStatus").textContent = "Saving…";
     const holes = formHoles;
+    const holeScores = readHoleInputs("hs"), pars = readHoleInputs("hp");
     const hasHoles = holeScores.some(v => v != null), hasPars = pars.some(v => v != null);
+
+    // Rows on a photographed card: mine is saved directly, other app players get a tagged score.
+    const tagged = editing || editingPending ? [] : cardRows.map((r, i) => ({ r, to: rowAssign[i] })).filter(x => x.to && x.to !== me);
+    const ownRound = !!editing || !!editingPending || !cardRows.length || rowAssign.includes(me);
+    const taken = rowAssign.filter(Boolean);
+    if (new Set(taken).size !== taken.length) { st.textContent = "The same person is picked for two rows. Fix that first."; return; }
+
+    if (!course) { st.textContent = "Enter a course name."; return; }
+    if (!ownRound && !tagged.length) { st.textContent = "Pick which row is yours, or who to tag."; return; }
+    if ((rating == null) !== (slope == null)) { st.textContent = "Enter both course rating and slope, or leave both blank."; return; }
+    if (ownRound) {
+      if (!Number.isFinite(score)) { st.textContent = "Enter your total score."; return; }
+      if (holeScores.every(v => v != null)) {
+        const sum = holeScores.reduce((a, b) => a + b, 0);
+        if (sum !== score) { st.textContent = `Hole scores add up to ${sum}, but the total says ${score}. Fix one before saving.`; return; }
+      }
+    }
+
+    saving = true; $("saveBtn").disabled = true; st.textContent = "Saving…";
     const row = { course, played_on: date, tees: tees || null, score, rating, slope, putts, holes, hole_scores: hasHoles ? holeScores : null, pars: hasPars ? pars : null };
     try {
-      const { error } = editing
-        ? await sb.from("rounds").update(row).eq("id", editing.id)
-        : await sb.from("rounds").insert(row);
-      if (error) throw error;
-      if ((rating != null && slope != null) || hasPars) {
-        const prev = courses.find(c => c.name === course && (c.tees || "") === tees && (c.holes === 9 ? 9 : 18) === holes) || {};
-        await sb.from("courses").upsert({
-          key: slug(course + "-" + (tees || "default") + "-" + holes), name: course, tees: tees || null, holes,
-          rating: rating ?? prev.rating ?? null, slope: slope ?? prev.slope ?? null, pars: hasPars ? pars : (prev.pars || null),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id,key" });
+      // Reviewing a tagged round: accept it (with any edits) in one step.
+      if (editingPending) {
+        const { error } = await sb.rpc("accept_pending_score", { p_id: editingPending.id, p_round: row });
+        if (error) throw error;
+        closeSheet(); resetForm(); await loadData();
+        return;
       }
-      await savePlayerHint();
+
+      // Send tags first (once per photo), so a retry after a failure doesn't send them twice.
+      let sentTo = [];
+      if (tagged.length && tagsSentFor !== readId) {
+        let photoPath = null;
+        if (cardPhoto) {
+          const path = `${me}/${crypto.randomUUID()}.jpg`;
+          const up = await sb.storage.from("scorecards").upload(path, cardPhoto, { contentType: "image/jpeg" });
+          if (!up.error) photoPath = path; else console.warn("photo upload", up.error);
+        }
+        const list = tagged.map(({ r, to }) => {
+          const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, holes) : null;
+          const tot = rowTotal(r);
+          return {
+            to_user: to, course, played_on: date, tees: tees || null, holes, rating, slope,
+            score: Number.isFinite(tot) && tot >= 9 && tot <= 250 ? tot : null,
+            putts: Number.isFinite(r.putts) ? r.putts : null,
+            hole_scores: hs && hs.some(v => v != null) ? hs : null, pars: hasPars ? pars : null,
+            row_label: r.label, photo_path: photoPath,
+          };
+        });
+        const { error } = await sb.from("pending_scores").insert(list);
+        if (error) { console.error(error); throw { tagFail: true }; }
+        tagsSentFor = readId;
+        sentTo = tagged.map(t => playerName(t.to));
+      }
+
+      if (ownRound) {
+        const { error } = editing
+          ? await sb.from("rounds").update(row).eq("id", editing.id)
+          : await sb.from("rounds").insert(row);
+        if (error) throw error;
+        if ((rating != null && slope != null) || hasPars) {
+          const prev = courses.find(c => c.name === course && (c.tees || "") === tees && (c.holes === 9 ? 9 : 18) === holes) || {};
+          await sb.from("courses").upsert({
+            key: slug(course + "-" + (tees || "default") + "-" + holes), name: course, tees: tees || null, holes,
+            rating: rating ?? prev.rating ?? null, slope: slope ?? prev.slope ?? null, pars: hasPars ? pars : (prev.pars || null),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id,key" });
+        }
+      }
+
+      // Remember confirmed labels ("TC" = Tim) so the next card guesses better. Failures here don't matter.
+      const learned = cardRows.map((r, i) => ({ r, to: rowAssign[i] }))
+        .filter(x => x.to && !/^row \d+$/i.test(x.r.label))
+        .map(x => ({ confirmed_by: me, label: normLabel(x.r.label), user_id: x.to, updated_at: new Date().toISOString() }));
+      if (learned.length) sb.from("row_labels").upsert(learned, { onConflict: "confirmed_by,label,user_id" }).then(() => {}, () => {});
+
       closeSheet();
       resetForm();
       await loadData();
+      if (sentTo.length) { banner(`Sent to ${sentTo.join(" and ")} to approve.`); setTimeout(() => banner(""), 6000); }
     } catch (err) {
       console.error(err);
-      $("formStatus").textContent = "Couldn't save the round. Check your connection and try again.";
+      st.textContent = err && err.tagFail
+        ? "Couldn't send the tagged scores, so nothing was saved. Try again."
+        : "Couldn't save the round. Check your connection and try again.";
     } finally { saving = false; $("saveBtn").disabled = false; }
+  });
+
+  // ---------- who's who on the card ----------
+  const rowTotal = (r) => {
+    const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles) : [];
+    return hs.length === formHoles && hs.every(v => v != null) ? hs.reduce((a, b) => a + b, 0) : r.total_score;
+  };
+  function renderRows() {
+    $("rowsPanel").classList.toggle("hidden", !cardRows.length);
+    if (!cardRows.length) { $("rowsList").innerHTML = ""; return; }
+    const me = myId();
+    const opts = [{ id: me, name: "Me" }, ...players.filter(p => p.user_id !== me).map(p => ({ id: p.user_id, name: p.name })), { id: "", name: "Not in the app" }];
+    $("rowsList").innerHTML = cardRows.map((r, i) => {
+      const tot = rowTotal(r);
+      const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles).map(v => v ?? "–").join(" ") : "";
+      return `<div class="prow">
+        <span class="who">${esc(r.label)}<span class="num">${tot ?? "–"}</span></span>
+        <select data-row="${i}" aria-label="Who is ${esc(r.label)}?">${opts.map(o => `<option value="${esc(o.id)}"${o.id === (rowAssign[i] || "") ? " selected" : ""}>${esc(o.name)}</option>`).join("")}</select>
+        ${hs ? `<span class="pholes num">${esc(hs)}</span>` : ""}
+      </div>`;
+    }).join("");
+  }
+  // Fill the form's score fields from whichever row is marked "Me".
+  function applyMyRow() {
+    for (let i = 0; i < 18; i++) { const el = $(`hs-${i}`); if (el) el.value = ""; }
+    $("score").value = ""; $("putts").value = "";
+    const i = rowAssign.indexOf(myId());
+    if (i < 0) return;
+    const r = cardRows[i];
+    fillHoles("hs", r.hole_scores);
+    const tot = rowTotal(r);
+    if (Number.isFinite(tot)) $("score").value = tot;
+    if (Number.isFinite(r.putts)) $("putts").value = r.putts;
+  }
+  $("rowsList").addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-row]"); if (!sel) return;
+    const i = Number(sel.dataset.row), v = sel.value, me = myId();
+    const meBefore = rowAssign.indexOf(me);
+    if (v) rowAssign = rowAssign.map((x, j) => (j !== i && x === v ? "" : x));   // one row per person
+    rowAssign[i] = v;
+    renderRows();
+    if (meBefore !== rowAssign.indexOf(me)) applyMyRow();
+  });
+
+  // ---------- tagged rounds waiting for me ----------
+  function renderInbox() {
+    $("inboxCard").classList.toggle("hidden", !pending.length);
+    $("inboxList").innerHTML = pending.map(p => {
+      const hs = Array.isArray(p.hole_scores) ? p.hole_scores.map(v => v ?? "–").join(" ") : "";
+      return `<div class="tag-item" data-id="${esc(p.id)}">
+        <div class="meta">${esc(playerName(p.from_user))} tagged you · ${esc(p.course)}${p.tees ? ` · ${esc(p.tees)}` : ""} · ${esc(fmtDate(p.played_on))} · ${p.holes === 9 ? 9 : 18} holes${p.row_label ? ` · row "${esc(p.row_label)}"` : ""}</div>
+        <div class="tag-score"><span class="num big">${p.score ?? "–"}</span>${hs ? `<span class="meta num">${esc(hs)}</span>` : ""}</div>
+        ${p.score == null ? `<div class="meta">The total couldn't be read. Use Edit to add it.</div>` : ""}
+        <div class="tag-actions">
+          <button type="button" class="small" data-act="accept"${p.score == null ? " disabled" : ""}>Accept</button>
+          <button type="button" class="small ghost" data-act="edit">Edit</button>
+          <button type="button" class="small ghost" data-act="reject">Reject</button>
+          ${p.photo_path ? `<button type="button" class="text" data-act="photo">View card</button>` : ""}
+        </div>
+        <img class="tag-photo hidden" alt="Scorecard photo">
+      </div>`;
+    }).join("");
+  }
+  $("inboxList").addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-act]"); if (!b || !sb) return;
+    const item = b.closest(".tag-item");
+    const p = pending.find(x => x.id === item.dataset.id); if (!p) return;
+    const st = $("inboxStatus"); st.textContent = ""; st.classList.remove("err");
+    const act = b.dataset.act;
+    if (act === "edit") { openSheet(null, p); return; }
+    if (act === "photo") {
+      const img = item.querySelector(".tag-photo");
+      if (!img.classList.contains("hidden")) { img.classList.add("hidden"); b.textContent = "View card"; return; }
+      b.disabled = true;
+      const { data, error } = await sb.storage.from("scorecards").createSignedUrl(p.photo_path, 600);
+      b.disabled = false;
+      if (error || !data) { st.classList.add("err"); st.textContent = "Couldn't load the photo. Try again."; return; }
+      img.src = data.signedUrl; img.classList.remove("hidden"); b.textContent = "Hide card";
+      return;
+    }
+    if (act === "reject" && b.dataset.armed !== "1") {
+      b.dataset.armed = "1"; b.textContent = "Confirm reject";
+      setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Reject"; } }, 3000);
+      return;
+    }
+    item.querySelectorAll("button").forEach(x => { x.disabled = true; });
+    const { error } = act === "accept"
+      ? await sb.rpc("accept_pending_score", { p_id: p.id })
+      : await sb.from("pending_scores").update({ status: "rejected", decided_at: new Date().toISOString() }).eq("id", p.id);
+    if (error) {
+      console.error(error);
+      item.querySelectorAll("button").forEach(x => { x.disabled = false; });
+      st.classList.add("err"); st.textContent = act === "accept" ? "Couldn't accept that round. Try again." : "Couldn't reject that round. Try again.";
+      return;
+    }
+    await loadData();
   });
 
   // ---------- scorecard photo reading ----------
@@ -839,44 +1042,46 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     try {
       let img;
       try { img = await shrink(file); } catch { throw { code: "bad_image" }; }
-      const hint = $("player").value.trim();
       const { data: { session: cur } } = await sb.auth.getSession();
       const resp = await fetch("/api/read-scorecard", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${cur ? cur.access_token : ""}` },
-        body: JSON.stringify({ image: await blobToBase64(img), mediaType: "image/jpeg", hint }),
+        body: JSON.stringify({ image: await blobToBase64(img), mediaType: "image/jpeg" }),
       });
       const payload = await resp.json().catch(() => null);
       if (!resp.ok || !payload || !payload.result) throw { code: payload && payload.code, message: payload && payload.error };
       const out = payload.result;
+      readId++; cardPhoto = img;
       if (out.holes_played === 9 || out.holes_played === 18) setFormHoles(out.holes_played);
-      let filled = [];
-      const notesPre = [];
+      const filled = [];
       const setIf = (id, v, label) => { if (v != null && v !== "" && !$(id).value) { $(id).value = v; filled.push(label); } };
-      for (let i = 0; i < 18; i++) { const s = $(`hs-${i}`); if (s) s.value = ""; }
-      if (fillHoles("hs", out.hole_scores)) filled.push("hole scores");
       if (readHoleInputs("hp").every(v => v == null) && fillHoles("hp", out.pars)) filled.push("pars");
       setIf("course", out.course_name, "course");
       if (out.date && /^\d{4}-\d{2}-\d{2}$/.test(out.date)) { $("date").value = out.date; filled.push("date"); }
       setIf("tees", out.tees, "tees");
-      if (Number.isFinite(out.total_score)) { $("score").value = out.total_score; filled.push("total"); }
-      const hs = readHoleInputs("hs");
-      if (hs.every(v => v != null)) {
-        const sum = hs.reduce((a, b) => a + b, 0);
-        if (Number.isFinite(out.total_score) && sum !== out.total_score) notesPre.push(`The hole scores add up to ${sum} but the card's total says ${out.total_score}; using ${sum}.`);
-        $("score").value = sum;
-      }
       fillFromCourse();
       setIf("rating", num(out.course_rating), "rating");
       setIf("slope", num(out.slope_rating), "slope");
-      setIf("putts", Number.isFinite(out.putts) ? out.putts : null, "putts");
-      const notes = notesPre;
-      if (out.player_row_found === false) notes.push(`Couldn't find the row "${hint}" on the card. Check the score.`);
-      if (Number.isFinite(out.total_score)) notes.push(`Read ${out.holes_played || formHoles} holes.`);
-      if (!out.course_rating && !out.slope_rating) notes.push("No rating or slope on the card, so this round won't count toward your handicap unless you add them.");
-      st.textContent = filled.length
-        ? `Filled in: ${filled.join(", ")}. ${notes.join(" ")} Check the numbers before saving.`
-        : "Couldn't find a score on the card. Check the row you entered, or type the score below.";
+
+      cardRows = Array.isArray(out.players) ? out.players : [];
+      const known = new Set([myId(), ...players.map(p => p.user_id)]);
+      rowAssign = cardRows.map(r => (r.user_id && known.has(r.user_id) ? r.user_id : ""));
+      renderRows();
+      applyMyRow();
+
+      const notes = [];
+      const mine = rowAssign.indexOf(myId());
+      if (!cardRows.length) notes.push("Couldn't find any scores on the card. Type your score below.");
+      else if (mine < 0) notes.push(`Found ${cardRows.length} player row${cardRows.length === 1 ? "" : "s"}, but couldn't tell which is yours. Pick it under "Who's who".`);
+      else {
+        const r = cardRows[mine], hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles) : [];
+        if (hs.length === formHoles && hs.every(v => v != null) && Number.isFinite(r.total_score)) {
+          const sum = hs.reduce((a, b) => a + b, 0);
+          if (sum !== r.total_score) notes.push(`Your hole scores add up to ${sum} but the card's total says ${r.total_score}; using ${sum}.`);
+        }
+      }
+      if (cardRows.length && !out.course_rating && !out.slope_rating && !$("rating").value) notes.push("No rating or slope on the card, so this round won't count toward your handicap unless you add them.");
+      st.textContent = `${filled.length ? `Filled in: ${filled.join(", ")}. ` : ""}${notes.join(" ")} Check the numbers before saving.`.trim();
     } catch (e) {
       st.classList.add("err");
       const code = e && e.code;
@@ -888,7 +1093,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     reading = on;
     $("reader").classList.toggle("hidden", !on);
     $("previewWrap").classList.toggle("reading", on);
-    for (const id of ["roundForm", "player"]) $(id).classList.toggle("busy", on);
+    for (const id of ["roundForm", "rowsPanel"]) $(id).classList.toggle("busy", on);
     document.querySelector("label.photo").classList.toggle("busy", on);
     $("saveBtn").disabled = on;
     $("roundForm").setAttribute("aria-busy", on ? "true" : "false");
@@ -909,13 +1114,6 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     e.target.value = "";
   });
 
-  async function savePlayerHint() {
-    const v = $("player").value.trim();
-    if (!sb || !session || v === playerHint) return;
-    playerHint = v;
-    await sb.from("profiles").upsert({ user_id: session.user.id, player_hint: v, updated_at: new Date().toISOString() });
-  }
-  $("player").addEventListener("change", savePlayerHint);
 
   // ---------- export ----------
   function toCSV() {
@@ -963,9 +1161,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
     });
     document.querySelectorAll("#themeMenu [data-pick]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.pick === theme)));
-    if (!$("addCard").classList.contains("hidden")) $("sheetTitle").textContent = editing
-      ? ({ baby: "Fix Your Oopsie 🍼", agent: "Amend dossier" }[theme] || "Edit round")
-      : ({ baby: "Tell Us About Your Round, Sweetie 🍼", agent: "File after-action report" }[theme] || "Log a round");
+    if (!$("addCard").classList.contains("hidden")) $("sheetTitle").textContent = sheetTitleText();
   }
   function toggleThemeMenu(open) {
     $("themeMenu").classList.toggle("hidden", !open);
@@ -990,15 +1186,13 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     let cb = false;
     try { cb = !!(sess && sess.user.email) && COLORBLIND_HASHES.includes(await sha256(sess.user.email.trim().toLowerCase())); } catch {}
     document.body.classList.toggle("cb", cb);
-    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); document.body.classList.remove("booting"); rounds = []; courses = []; chat = []; renderChat(); render(); return; }
+    if (!sess) { applyTheme(""); document.body.classList.add("signed-out"); document.body.classList.remove("booting"); rounds = []; courses = []; players = []; pending = []; renderInbox(); chat = []; renderChat(); render(); return; }
     codename = "";
     try { codename = CODENAMES[parseInt((await sha256(sess.user.id)).slice(0, 8), 16) % CODENAMES.length]; } catch {}
-    const { data } = await sb.from("profiles").select("player_hint, theme").eq("user_id", sess.user.id).maybeSingle();
+    const { data } = await sb.from("profiles").select("theme").eq("user_id", sess.user.id).maybeSingle();
     applyTheme(data && THEMES.includes(data.theme) ? data.theme : await defaultTheme(sess));
     document.body.classList.remove("signed-out", "booting");
     $("headMeta").textContent = sess.user.email || "Your rounds and stats";
-    playerHint = (data && data.player_hint) || "";
-    if (!$("player").value) $("player").value = playerHint;
     await loadData();
   }
 
