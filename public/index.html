@@ -259,16 +259,16 @@ body.clubhouse .rows-panel, body.clubhouse .prow select { border-radius: 2px; }
 body.agent .rows-panel, body.agent .prow select { border-radius: 4px; }
 
 /* tagged rounds inbox */
-.tag-item { gap: 8px; transition: opacity .28s ease, transform .38s cubic-bezier(.4,0,.2,1), height .34s ease .14s, padding .34s ease .14s, margin .34s ease .14s, border-color .2s ease .14s; }
+.tag-item { gap: 8px; }
+/* dismissing: slide, fade and collapse together as one motion */
+.tag-item.leaving, #inboxCard.leaving { transition: opacity .34s ease, transform .34s cubic-bezier(.4,0,.2,1), height .34s cubic-bezier(.4,0,.2,1), padding .34s cubic-bezier(.4,0,.2,1), margin .34s cubic-bezier(.4,0,.2,1), border-color .34s ease; }
 .tag-item .pill.soft { vertical-align: 2px; }
-.tag-item.leaving-accept { opacity: 0; transform: translateX(36px); }
-.tag-item.leaving-reject { opacity: 0; transform: translateX(-36px); }
+.leaving.leaving-accept { opacity: 0; transform: translateX(36px); }
+.leaving.leaving-reject { opacity: 0; transform: translateX(-36px); }
 .tag-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
 .tag-photo { width: 100%; border-radius: 10px; display: block; margin-top: 4px; }
 .tag-item .edit-total { display: flex; align-items: center; gap: 10px; }
 .tag-item .edit-total input { width: 80px; }
-#inboxCard { transition: opacity .3s ease, transform .3s ease; }
-#inboxCard.leaving { opacity: 0; transform: scale(.98); }
 /* editable hole scores, in the same grid as the read-only scorecard */
 .mini.edit input { width: 26px; height: 26px; padding: 0; margin: 0 auto; text-align: center; font: 800 13px var(--font); border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
 .mini.edit input.eagle, .mini.edit input.birdie { background: var(--birdie); color: #111114; border-color: transparent; }
@@ -281,7 +281,7 @@ body.cb .mini.edit input.eagle, body.cb .mini.edit input.birdie { color: #ffffff
 /* toast: drops in from the top, then lifts away */
 .toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 32px); padding: 10px 18px 10px 10px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.28); opacity: 0; transform: translate(-50%, -150%) scale(.94); pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); transition: transform .5s cubic-bezier(.18,1.35,.4,1), opacity .2s ease; }
-.toast.hide { opacity: 0; transform: translate(-50%, -150%) scale(.94); transition: transform .32s cubic-bezier(.5,0,.75,0), opacity .28s ease .04s; }
+.toast.hide { opacity: 0; transform: translate(-50%, -150%) scale(.94); transition: transform .3s cubic-bezier(.5,0,.75,0), opacity .3s cubic-bezier(.5,0,.75,0); }
 .toast .tick { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; transform: scale(.4); }
 .toast.show .tick { transform: scale(1); transition: transform .4s cubic-bezier(.18,1.6,.4,1) .12s; }
 .toast .tick path { stroke-dasharray: 20; stroke-dashoffset: 20; }
@@ -1047,7 +1047,6 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   function renderInbox() {
     $("inboxCard").classList.toggle("hidden", !pending.length);
-    $("inboxCard").classList.remove("leaving");
     $("inboxList").innerHTML = pending.map(p => {
       const editingThis = inboxEditing === p.id;
       const bits = [`${p.holes === 9 ? 9 : 18} holes`, esc(fmtDate(p.played_on)), p.tees ? esc(p.tees) : "", p.putts != null ? `${p.putts} putts` : "", p.row_label ? `Row “${esc(p.row_label)}”` : ""].filter(Boolean).join(" · ");
@@ -1084,26 +1083,30 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
   // Slide an item out, collapse the gap, then (if it was the last one) fade the whole card.
   const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function animateOut(item, kind) {
+  // One motion: the element slides, fades and collapses at the same time.
+  // When it's the last tagged round, the whole card goes instead of just the round.
+  function animateOut(el, kind, extra) {
     return new Promise(res => {
       if (reduceMotion()) return res();
-      item.style.height = item.offsetHeight + "px"; item.style.overflow = "hidden";
-      void item.offsetHeight;
-      item.classList.add(kind === "reject" ? "leaving-reject" : "leaving-accept");
-      Object.assign(item.style, { height: "0px", paddingTop: "0px", paddingBottom: "0px", marginTop: "0px", borderTopColor: "transparent" });
+      el.style.height = el.offsetHeight + "px"; el.style.overflow = "hidden";
+      void el.offsetHeight;
+      el.classList.add("leaving", kind === "reject" ? "leaving-reject" : "leaving-accept");
+      Object.assign(el.style, { height: "0px", paddingTop: "0px", paddingBottom: "0px", marginTop: "0px", borderTopColor: "transparent" }, extra || {});
       let done = false; const finish = () => { if (!done) { done = true; res(); } };
-      item.addEventListener("transitionend", (ev) => { if (ev.propertyName === "height") finish(); });
-      setTimeout(finish, 700);
+      el.addEventListener("transitionend", (ev) => { if (ev.target === el && ev.propertyName === "height") finish(); });
+      setTimeout(finish, 500);
     });
   }
   async function dismissPending(item, p, kind) {
-    await animateOut(item, kind);
+    const card = $("inboxCard");
+    const last = pending.length === 1;
+    // The card sits in a grid with a gap below it; pull that gap in too so nothing jumps afterwards.
+    const gap = parseFloat(getComputedStyle(card.parentElement).rowGap) || 0;
+    await (last ? animateOut(card, kind, { marginBottom: `-${gap}px` }) : animateOut(item, kind));
     pending = pending.filter(x => x.id !== p.id);
-    if (!pending.length && !reduceMotion()) {
-      $("inboxCard").classList.add("leaving");
-      await new Promise(r => setTimeout(r, 300));
-    }
     if (inboxEditing === p.id) inboxEditing = null;
+    card.removeAttribute("style");
+    card.classList.remove("leaving", "leaving-accept", "leaving-reject");
     renderInbox();
     loadData();
   }
