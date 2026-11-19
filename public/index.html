@@ -259,12 +259,42 @@ body.clubhouse .rows-panel, body.clubhouse .prow select { border-radius: 2px; }
 body.agent .rows-panel, body.agent .prow select { border-radius: 4px; }
 
 /* tagged rounds inbox */
-.tag-item { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
-.tag-item:first-child { padding-top: 0; border-top: 0; }
-.tag-item .tag-score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.tag-item .tag-score .num.big { font-size: 26px; font-weight: 800; }
-.tag-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.tag-photo { width: 100%; border-radius: 10px; display: block; }
+.tag-item { gap: 8px; transition: opacity .28s ease, transform .38s cubic-bezier(.4,0,.2,1), height .34s ease .14s, padding .34s ease .14s, margin .34s ease .14s, border-color .2s ease .14s; }
+.tag-item .pill.soft { vertical-align: 2px; }
+.tag-item.leaving-accept { opacity: 0; transform: translateX(36px); }
+.tag-item.leaving-reject { opacity: 0; transform: translateX(-36px); }
+.tag-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.tag-photo { width: 100%; border-radius: 10px; display: block; margin-top: 4px; }
+.tag-item .edit-total { display: flex; align-items: center; gap: 10px; }
+.tag-item .edit-total input { width: 80px; }
+#inboxCard { transition: opacity .3s ease, transform .3s ease; }
+#inboxCard.leaving { opacity: 0; transform: scale(.98); }
+/* editable hole scores, in the same grid as the read-only scorecard */
+.mini.edit input { width: 26px; height: 26px; padding: 0; margin: 0 auto; text-align: center; font: 800 13px var(--font); border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+.mini.edit input.eagle, .mini.edit input.birdie { background: var(--birdie); color: #111114; border-color: transparent; }
+.mini.edit input.par { background: var(--par); color: #111114; border-color: transparent; }
+.mini.edit input.bogey { background: var(--bogey); color: #111114; border-color: transparent; }
+.mini.edit input.double { background: var(--double); color: #111114; border-color: transparent; }
+.mini.edit input.triple { background: var(--triple); color: #111114; border-color: transparent; }
+body.cb .mini.edit input.eagle, body.cb .mini.edit input.birdie { color: #ffffff; }
+
+/* toast: drops in from the top, then lifts away */
+.toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 60; display: flex; align-items: center; gap: 10px; width: max-content; max-width: calc(100vw - 32px); padding: 10px 18px 10px 10px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 700; font-size: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.28); opacity: 0; transform: translate(-50%, -150%) scale(.94); pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); transition: transform .5s cubic-bezier(.18,1.35,.4,1), opacity .2s ease; }
+.toast.hide { opacity: 0; transform: translate(-50%, -150%) scale(.94); transition: transform .32s cubic-bezier(.5,0,.75,0), opacity .28s ease .04s; }
+.toast .tick { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; flex: none; transform: scale(.4); }
+.toast.show .tick { transform: scale(1); transition: transform .4s cubic-bezier(.18,1.6,.4,1) .12s; }
+.toast .tick path { stroke-dasharray: 20; stroke-dashoffset: 20; }
+.toast.show .tick path { stroke-dashoffset: 0; transition: stroke-dashoffset .35s ease .3s; }
+body.clubhouse .toast { border-radius: 2px; letter-spacing: .04em; }
+body.clubhouse .toast .tick { border-radius: 2px; }
+body.agent .toast { border-radius: 4px; background: var(--accent); color: var(--on-accent); text-transform: uppercase; letter-spacing: .08em; }
+body.agent .toast .tick { background: var(--on-accent); color: var(--accent); border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .toast, .toast.show, .toast.hide, .toast .tick, .toast .tick path { transition: opacity .2s ease !important; transform: translate(-50%, 0) !important; stroke-dashoffset: 0 !important; }
+  .toast .tick { transform: none !important; }
+  .tag-item, #inboxCard { transition: none !important; }
+}
 
 /* chat */
 .chat-log { display: grid; gap: 10px; max-height: 420px; overflow-y: auto; }
@@ -352,6 +382,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
   </section>
 
   <div id="banner" class="banner hidden" role="status"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <section class="app-only card hidden" id="inboxCard" aria-label="Tagged rounds">
     <div class="card-head"><h2 data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Cards to attest">Tagged rounds</h2></div>
@@ -908,7 +939,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       closeSheet();
       resetForm();
       await loadData();
-      if (sentTo.length) { banner(`Sent to ${sentTo.join(" and ")} to approve.`); setTimeout(() => banner(""), 6000); }
+      if (sentTo.length) toast(`Sent to ${sentTo.join(" and ")} to approve`);
     } catch (err) {
       console.error(err);
       st.textContent = err && err.tagFail
@@ -959,32 +990,132 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     if (meBefore !== rowAssign.indexOf(me)) applyMyRow();
   });
 
+  // ---------- toast ----------
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $("toast");
+    clearTimeout(toastTimer);
+    t.innerHTML = `<span class="tick" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span></span>`;
+    t.lastChild.textContent = msg;
+    t.classList.remove("show", "hide");
+    void t.offsetWidth;                      // restart the entrance animation
+    t.classList.add("show");
+    toastTimer = setTimeout(() => {
+      t.classList.add("hide");
+      toastTimer = setTimeout(() => t.classList.remove("show", "hide"), 400);
+    }, 3200);
+  }
+
   // ---------- tagged rounds waiting for me ----------
+  const pendAsRound = (p) => ({ holes: p.holes, holeScores: Array.isArray(p.hole_scores) ? p.hole_scores : null, pars: Array.isArray(p.pars) ? p.pars : null });
+  let inboxEditing = null;   // id of the tagged round being edited in place
+
+  // Same grid as the read-only scorecard, with an input per hole.
+  function editGrid(p) {
+    const r = pendAsRound(p), n = holesOf(r);
+    let h = "";
+    for (let b = 0; b < n / 9; b++) {
+      const idx = Array.from({ length: 9 }, (_, k) => b * 9 + k);
+      h += `<div class="mini edit"><span class="rl">Hole</span>${idx.map(i => `<span class="hn">${i + 1}</span>`).join("")}<span class="hn">${b ? "In" : "Out"}</span>`;
+      if (r.pars && r.pars.some(Number.isFinite)) h += `<span class="rl">Par</span>${idx.map(i => `<span class="hn">${Number.isFinite(r.pars[i]) ? r.pars[i] : ""}</span>`).join("")}<span class="hn"></span>`;
+      h += `<span class="rl">You</span>${idx.map(i => {
+        const v = r.holeScores && Number.isFinite(r.holeScores[i]) ? r.holeScores[i] : "";
+        return `<input type="text" inputmode="numeric" maxlength="2" data-h="${i}" value="${v}" aria-label="Hole ${i + 1} score">`;
+      }).join("")}<span class="tot" data-nine="${b}"></span></div>`;
+    }
+    return `<div class="card-scroll">${h}</div><div class="edit-total"><label class="meta" for="tot-${esc(p.id)}">Total</label><input type="number" inputmode="numeric" id="tot-${esc(p.id)}" class="tot-in" min="9" max="250"></div>`;
+  }
+  function readEdit(item, p) {
+    const n = holesOf(pendAsRound(p));
+    const hs = Array.from({ length: n }, (_, i) => { const el = item.querySelector(`input[data-h="${i}"]`); const v = el ? parseInt(el.value, 10) : NaN; return Number.isFinite(v) && v > 0 && v < 30 ? v : null; });
+    return hs;
+  }
+  // Recolor inputs, update nine totals and the overall total as the person types.
+  function syncEdit(item, p) {
+    const pars = Array.isArray(p.pars) ? p.pars : [];
+    const hs = readEdit(item, p);
+    item.querySelectorAll("input[data-h]").forEach(el => {
+      const i = Number(el.dataset.h), s = hs[i], par = pars[i];
+      el.className = Number.isFinite(s) && Number.isFinite(par) ? scoreClass(s - par) : "";
+    });
+    item.querySelectorAll(".tot[data-nine]").forEach(t => {
+      const b = Number(t.dataset.nine), v = hs.slice(b * 9, b * 9 + 9);
+      t.textContent = v.every(Number.isFinite) ? v.reduce((a, x) => a + x, 0) : "";
+    });
+    if (hs.every(Number.isFinite)) item.querySelector(".tot-in").value = hs.reduce((a, x) => a + x, 0);
+  }
+
   function renderInbox() {
     $("inboxCard").classList.toggle("hidden", !pending.length);
+    $("inboxCard").classList.remove("leaving");
     $("inboxList").innerHTML = pending.map(p => {
-      const hs = Array.isArray(p.hole_scores) ? p.hole_scores.map(v => v ?? "–").join(" ") : "";
-      return `<div class="tag-item" data-id="${esc(p.id)}">
-        <div class="meta">${esc(playerName(p.from_user))} tagged you · ${esc(p.course)}${p.tees ? ` · ${esc(p.tees)}` : ""} · ${esc(fmtDate(p.played_on))} · ${p.holes === 9 ? 9 : 18} holes${p.row_label ? ` · row "${esc(p.row_label)}"` : ""}</div>
-        <div class="tag-score"><span class="num big">${p.score ?? "–"}</span>${hs ? `<span class="meta num">${esc(hs)}</span>` : ""}</div>
-        ${p.score == null ? `<div class="meta">The total couldn't be read. Use Edit to add it.</div>` : ""}
+      const editingThis = inboxEditing === p.id;
+      const bits = [`${p.holes === 9 ? 9 : 18} holes`, esc(fmtDate(p.played_on)), p.tees ? esc(p.tees) : "", p.putts != null ? `${p.putts} putts` : "", p.row_label ? `Row “${esc(p.row_label)}”` : ""].filter(Boolean).join(" · ");
+      const mc = miniCard(pendAsRound(p));
+      return `<div class="round tag-item" data-id="${esc(p.id)}">
+        <div class="round-top">
+          <div class="round-info"><span class="course">${esc(p.course)}</span> <span class="pill soft">From ${esc(playerName(p.from_user))}</span><div class="meta">${bits}</div></div>
+          <span class="score num">${p.score ?? "–"}</span>
+        </div>
+        ${editingThis ? editGrid(p) : mc}
+        ${!editingThis && p.score == null ? `<div class="meta">The total couldn't be read. Tap Edit to add it.</div>` : ""}
         <div class="tag-actions">
-          <button type="button" class="small" data-act="accept"${p.score == null ? " disabled" : ""}>Accept</button>
-          <button type="button" class="small ghost" data-act="edit">Edit</button>
-          <button type="button" class="small ghost" data-act="reject">Reject</button>
+          ${editingThis
+            ? `<button type="button" class="small" data-act="save">Save &amp; accept</button><button type="button" class="small ghost" data-act="cancel">Cancel</button>`
+            : `<button type="button" class="small" data-act="accept"${p.score == null ? " disabled" : ""}>Accept</button><button type="button" class="small ghost" data-act="edit">Edit</button><button type="button" class="small ghost" data-act="reject">Reject</button>`}
           ${p.photo_path ? `<button type="button" class="text" data-act="photo">View card</button>` : ""}
         </div>
         <img class="tag-photo hidden" alt="Scorecard photo">
       </div>`;
     }).join("");
+    const ed = inboxEditing && pending.find(p => p.id === inboxEditing);
+    if (ed) {
+      const item = $("inboxList").querySelector(`.tag-item[data-id="${CSS.escape(ed.id)}"]`);
+      item.querySelector(".tot-in").value = ed.score ?? "";
+      syncEdit(item, ed);
+    }
   }
+  $("inboxList").addEventListener("input", (e) => {
+    if (!e.target.matches("input[data-h]")) return;
+    const item = e.target.closest(".tag-item");
+    const p = pending.find(x => x.id === item.dataset.id);
+    if (p) syncEdit(item, p);
+  });
+
+  // Slide an item out, collapse the gap, then (if it was the last one) fade the whole card.
+  const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function animateOut(item, kind) {
+    return new Promise(res => {
+      if (reduceMotion()) return res();
+      item.style.height = item.offsetHeight + "px"; item.style.overflow = "hidden";
+      void item.offsetHeight;
+      item.classList.add(kind === "reject" ? "leaving-reject" : "leaving-accept");
+      Object.assign(item.style, { height: "0px", paddingTop: "0px", paddingBottom: "0px", marginTop: "0px", borderTopColor: "transparent" });
+      let done = false; const finish = () => { if (!done) { done = true; res(); } };
+      item.addEventListener("transitionend", (ev) => { if (ev.propertyName === "height") finish(); });
+      setTimeout(finish, 700);
+    });
+  }
+  async function dismissPending(item, p, kind) {
+    await animateOut(item, kind);
+    pending = pending.filter(x => x.id !== p.id);
+    if (!pending.length && !reduceMotion()) {
+      $("inboxCard").classList.add("leaving");
+      await new Promise(r => setTimeout(r, 300));
+    }
+    if (inboxEditing === p.id) inboxEditing = null;
+    renderInbox();
+    loadData();
+  }
+
   $("inboxList").addEventListener("click", async (e) => {
     const b = e.target.closest("button[data-act]"); if (!b || !sb) return;
     const item = b.closest(".tag-item");
     const p = pending.find(x => x.id === item.dataset.id); if (!p) return;
     const st = $("inboxStatus"); st.textContent = ""; st.classList.remove("err");
     const act = b.dataset.act;
-    if (act === "edit") { openSheet(null, p); return; }
+    if (act === "edit") { inboxEditing = p.id; renderInbox(); const f = item.isConnected ? null : $("inboxList").querySelector(`.tag-item[data-id="${CSS.escape(p.id)}"] input[data-h]`); if (f) f.focus(); return; }
+    if (act === "cancel") { inboxEditing = null; renderInbox(); return; }
     if (act === "photo") {
       const img = item.querySelector(".tag-photo");
       if (!img.classList.contains("hidden")) { img.classList.add("hidden"); b.textContent = "View card"; return; }
@@ -1000,17 +1131,26 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "Reject"; } }, 3000);
       return;
     }
-    item.querySelectorAll("button").forEach(x => { x.disabled = true; });
-    const { error } = act === "accept"
-      ? await sb.rpc("accept_pending_score", { p_id: p.id })
-      : await sb.from("pending_scores").update({ status: "rejected", decided_at: new Date().toISOString() }).eq("id", p.id);
+    let round = null;
+    if (act === "save") {
+      const hs = readEdit(item, p);
+      const total = parseInt(item.querySelector(".tot-in").value, 10);
+      if (!Number.isFinite(total) || total < 9 || total > 250) { st.classList.add("err"); st.textContent = "Enter a total score."; return; }
+      if (hs.every(Number.isFinite) && hs.reduce((a, x) => a + x, 0) !== total) { st.classList.add("err"); st.textContent = "Hole scores don't add up to the total. Fix one first."; return; }
+      round = { score: total, hole_scores: hs.some(Number.isFinite) ? hs : null };
+    }
+    item.querySelectorAll("button, input").forEach(x => { x.disabled = true; });
+    const { error } = act === "reject"
+      ? await sb.from("pending_scores").update({ status: "rejected", decided_at: new Date().toISOString() }).eq("id", p.id)
+      : await sb.rpc("accept_pending_score", round ? { p_id: p.id, p_round: round } : { p_id: p.id });
     if (error) {
       console.error(error);
-      item.querySelectorAll("button").forEach(x => { x.disabled = false; });
-      st.classList.add("err"); st.textContent = act === "accept" ? "Couldn't accept that round. Try again." : "Couldn't reject that round. Try again.";
+      item.querySelectorAll("button, input").forEach(x => { x.disabled = false; });
+      st.classList.add("err"); st.textContent = act === "reject" ? "Couldn't reject that round. Try again." : "Couldn't accept that round. Try again.";
       return;
     }
-    await loadData();
+    if (act !== "reject") toast(`Added ${p.course} to your rounds`);
+    await dismissPending(item, p, act === "reject" ? "reject" : "accept");
   });
 
   // ---------- scorecard photo reading ----------
