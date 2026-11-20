@@ -200,8 +200,27 @@ export default async function handler(req, res) {
       guess: p.guess,
     }))
     .filter(r => (r.hole_scores && r.hole_scores.some(v => v != null)) || r.total_score != null);
-  result.yardages = Array.isArray(result.yardages) ? result.yardages.slice(0, holes).map(v => (Number.isInteger(v) && v >= 40 && v <= 750 ? v : null)) : null;
-  if (result.yardages && !result.yardages.some(v => v != null)) result.yardages = null;
+  // Every yardage row on the card. The app picks one by the tees played, or asks.
+  const toInt = (v) => (typeof v === "string" ? parseInt(v.replace(/[^\d]/g, ""), 10) : v);
+  const toNum = (v) => { const n = typeof v === "string" ? parseFloat(v) : v; return Number.isFinite(n) ? n : null; };
+  result.tee_sets = (Array.isArray(result.tee_sets) ? result.tee_sets : [])
+    .filter(t => t && typeof t === "object")
+    .slice(0, 8)
+    .map((t, i) => {
+      const yd = Array.isArray(t.yardages) ? t.yardages.slice(0, holes).map(v => { const n = toInt(v); return Number.isInteger(n) && n >= 40 && n <= 750 ? n : null; }) : [];
+      const rating = toNum(t.course_rating), slope = toInt(t.slope_rating);
+      return {
+        name: (typeof t.name === "string" && t.name.trim() ? t.name.trim() : `Tees ${i + 1}`).slice(0, 30),
+        yardages: yd.some(v => v != null) ? yd : null,
+        course_rating: rating != null && rating >= 20 && rating <= 85 ? rating : null,
+        slope_rating: Number.isInteger(slope) && slope >= 55 && slope <= 155 ? slope : null,
+      };
+    })
+    .filter(t => t.yardages);
+  const teeName = typeof result.tees === "string" ? result.tees.trim().toLowerCase() : "";
+  const played = (teeName && result.tee_sets.find(t => t.name.toLowerCase() === teeName))
+    || (result.tee_sets.length === 1 ? result.tee_sets[0] : null);
+  result.yardages = played ? played.yardages : null;
   const picks = assignRows(rows, { meId: user.id, players, learned });
   result.players = rows.map((r, i) => ({ label: r.label, hole_scores: r.hole_scores, total_score: r.total_score, putts: r.putts, user_id: picks[i].id, matched_by: picks[i].source }));
   res.status(200).json({ result });
