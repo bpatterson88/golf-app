@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Golf">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("golf.lastTheme");if(t==="agent"||t==="clubhouse"||t==="baby")document.querySelector('link[rel="icon"]').href="/icon-"+t+".svg";}catch(e){}</script>
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1299,6 +1300,10 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     theme = THEMES.includes(name) ? name : "";
     for (const t of THEMES) document.body.classList.toggle(t, theme === t);
     const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = THEME_COLORS[theme] || "#000000";
+    // favicon follows the theme; remember it so the next page load shows the right one before sign-in finishes
+    const icon = document.querySelector('link[rel="icon"]'), href = theme ? `/icon-${theme}.svg` : "/icon.svg";
+    if (icon && icon.getAttribute("href") !== href) { const n = icon.cloneNode(); n.setAttribute("href", href); icon.replaceWith(n); }
+    if (theme) { try { localStorage.setItem("golf.lastTheme", theme); } catch {} }
     document.querySelectorAll("[data-baby], [data-agent], [data-clubhouse]").forEach(el => {
       if (el.dataset.adult === undefined) el.dataset.adult = el.textContent;
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
