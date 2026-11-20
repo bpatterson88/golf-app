@@ -200,6 +200,8 @@ export default async function handler(req, res) {
       guess: p.guess,
     }))
     .filter(r => (r.hole_scores && r.hole_scores.some(v => v != null)) || r.total_score != null);
+  result.yardages = Array.isArray(result.yardages) ? result.yardages.slice(0, holes).map(v => (Number.isInteger(v) && v >= 40 && v <= 750 ? v : null)) : null;
+  if (result.yardages && !result.yardages.some(v => v != null)) result.yardages = null;
   const picks = assignRows(rows, { meId: user.id, players, learned });
   result.players = rows.map((r, i) => ({ label: r.label, hole_scores: r.hole_scores, total_score: r.total_score, putts: r.putts, user_id: picks[i].id, matched_by: picks[i].source }));
   res.status(200).json({ result });

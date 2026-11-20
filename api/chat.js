@@ -53,7 +53,7 @@ async function logMessage(supabaseUrl, anonKey, token) {
 }
 
 async function loadRounds(supabaseUrl, anonKey, token) {
-  const cols = "played_on,course,tees,holes,score,rating,slope,putts,hole_scores,pars";
+  const cols = "played_on,course,tees,holes,score,rating,slope,putts,hole_scores,pars,yardages";
   const r = await fetch(`${supabaseUrl}/rest/v1/rounds?select=${cols}&order=played_on.asc&limit=500`, {
     headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
   });
@@ -74,6 +74,7 @@ function describeRounds(rounds) {
     `putts ${r.putts ?? "-"}`,
     `hole scores ${arr(r.hole_scores)}`,
     `pars ${arr(r.pars)}`,
+    `yards ${arr(r.yardages)}`,
   ].join(" | "));
   return `This player's rounds, oldest first (${rounds.length} total; "-" means not recorded):\n${lines.join("\n")}`;
 }
