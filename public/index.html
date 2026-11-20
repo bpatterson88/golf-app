@@ -377,6 +377,19 @@ body.baby .hgrid input.yds, body.agent .hgrid input.yds { font-size: 12px; lette
 .yds-total:empty { display: none; }
 .mini .hn.yd { font-size: 10px; letter-spacing: -.03em; }
 
+/* tee chooser */
+.tee-pick { display: grid; gap: 8px; padding: 12px; border-radius: 12px; border: 1px dashed var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.tee-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.tee-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: var(--field); color: var(--ink); border: 1px solid var(--field-line); font: 600 14px var(--font); }
+.tee-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.tee-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--tee); box-shadow: 0 0 0 1px rgba(128,128,128,.6); flex: none; }
+.tee-yds { font-size: 12px; opacity: .75; font-weight: 600; }
+body.agent .tee-pick, body.agent .tee-chip { border-radius: 4px; }
+body.agent .tee-chip { text-transform: uppercase; letter-spacing: .08em; font-weight: 400; }
+body.clubhouse .tee-pick, body.clubhouse .tee-chip { border-radius: 2px; }
+body.clubhouse .tee-chip .tee-name { font-family: var(--serif); }
+body.baby .tee-pick { border-radius: 18px; border-width: 2px; }
+
 /* ===== scorecard photo: full width, with "replace" docked underneath ===== */
 .card-frame { display: grid; }
 .card-frame:not(.has-photo) { display: contents; }
@@ -607,6 +620,10 @@ body.baby .prow.none { border-color: #e6d9f5; }
       <div class="field">
         <span class="hint-label">Scores by hole</span>
         <div class="holes-wrap" id="holeGrid"></div>
+        <div class="tee-pick hidden" id="teePick" role="group" aria-labelledby="teePickLabel">
+          <span class="hint-label" id="teePickLabel">Which tees did you play?</span>
+          <div class="tee-chips" id="teeChips"></div>
+        </div>
         <span class="hint yds-total num" id="ydsTotal" aria-live="polite"></span>
         <span class="hint">Yards and par are optional. The total fills in when every hole has a score.</span>
       </div>
@@ -658,6 +675,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   let saving = false;
   let formHoles = 18, chartHoles = 18, chartChosen = false;
   let players = [], pending = [];                  // player list; tagged rounds waiting for me
+  let teeSets = [];   // yardage rows read off the last photo
   let cardRows = [], rowAssign = [], cardPhoto = null, readId = 0, tagsSentFor = 0;
   let editingPending = null;
   const myId = () => (session && session.user ? session.user.id : "");
@@ -840,6 +858,44 @@ body.baby .prow.none { border-color: #e6d9f5; }
     const v = y.slice(0, n);
     return v.length === n && v.every(Number.isFinite) ? `${v.reduce((a, x) => a + x, 0).toLocaleString()} yds` : "";
   }
+  // ---------- tee sets from the photo ----------
+  // Several yardage rows and no way to tell which was played: show one chip per row.
+  function renderTeePick() {
+    const cur = $("tees").value.trim().toLowerCase();
+    const picked = teeSets.find(t => t.name.toLowerCase() === cur);
+    const show = teeSets.length > 1;
+    $("teePick").classList.toggle("hidden", !show);
+    if (!show) { $("teeChips").innerHTML = ""; return; }
+    $("teeChips").innerHTML = teeSets.map((t, i) => {
+      const tot = t.yardages.every(Number.isFinite) ? t.yardages.reduce((a, v) => a + v, 0).toLocaleString() : "";
+      return `<button type="button" class="tee-chip" data-tee="${i}" aria-pressed="${t === picked}">
+        <span class="tee-dot" style="--tee:${esc(teeColor(t.name))}" aria-hidden="true"></span><span class="tee-name">${esc(t.name)}</span>${tot ? `<span class="tee-yds num">${tot}</span>` : ""}</button>`;
+    }).join("");
+  }
+  function teeColor(name) {
+    const n = String(name).toLowerCase();
+    const map = [["black", "#111"], ["blue", "#2b6cff"], ["white", "#fff"], ["gold", "#d4a64a"], ["yellow", "#f2d13b"], ["red", "#e5363d"], ["green", "#2fa35b"], ["silver", "#b9bec7"], ["grey", "#9aa0a6"], ["gray", "#9aa0a6"], ["orange", "#ff8a1f"], ["purple", "#8a5cf6"], ["copper", "#b87333"], ["tan", "#d2b48c"], ["combo", "linear-gradient(90deg,#2b6cff 50%,#fff 50%)"]];
+    const hit = map.find(([k]) => n.includes(k));
+    return hit ? hit[1] : "var(--muted)";
+  }
+  function useTeeSet(t) {
+    $("tees").value = t.name;
+    for (let i = 0; i < 18; i++) { const el = $(`hy-${i}`); if (el) el.value = ""; }
+    fillHoles("hy", t.yardages);
+    if (!$("rating").value && t.course_rating != null) $("rating").value = t.course_rating;
+    if (!$("slope").value && t.slope_rating != null) $("slope").value = t.slope_rating;
+    renderTeePick();
+  }
+  $("teeChips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-tee]"); if (!b) return;
+    useTeeSet(teeSets[Number(b.dataset.tee)]);
+  });
+  // Typing a tee name that matches a row on the card fills its yardage.
+  $("tees").addEventListener("change", () => {
+    const t = teeSets.find(x => x.name.toLowerCase() === $("tees").value.trim().toLowerCase());
+    if (t) useTeeSet(t); else renderTeePick();
+  });
+
   function scoreClass(d) { return d <= -2 ? "eagle" : d === -1 ? "birdie" : d === 0 ? "par" : d === 1 ? "bogey" : d === 2 ? "double" : "triple"; }
   function miniCard(r) {
     if (!Array.isArray(r.holeScores) || !r.holeScores.some(Number.isFinite)) return "";
@@ -924,6 +980,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     $("holeGrid").innerHTML = "";
     setFormHoles(18);
     cardRows = []; rowAssign = []; cardPhoto = null; renderRows();
+    teeSets = []; renderTeePick();
     document.querySelector("label.photo").classList.remove("hidden");
     $("preview").classList.add("hidden"); $("preview").removeAttribute("src");
     setPhotoState();
@@ -1360,7 +1417,9 @@ body.baby .prow.none { border-color: #e6d9f5; }
       const filled = [];
       const setIf = (id, v, label) => { if (v != null && v !== "" && !$(id).value) { $(id).value = v; filled.push(label); } };
       if (readHoleInputs("hp").every(v => v == null) && fillHoles("hp", out.pars)) filled.push("pars");
+      teeSets = Array.isArray(out.tee_sets) ? out.tee_sets : [];
       if (readHoleInputs("hy").every(v => v == null) && fillHoles("hy", out.yardages)) filled.push("yardage");
+      renderTeePick();
       setIf("course", out.course_name, "course");
       if (out.date && /^\d{4}-\d{2}-\d{2}$/.test(out.date)) { $("date").value = out.date; filled.push("date"); }
       setIf("tees", out.tees, "tees");
