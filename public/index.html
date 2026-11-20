@@ -377,6 +377,21 @@ body.baby .hgrid input.yds, body.agent .hgrid input.yds { font-size: 12px; lette
 .yds-total:empty { display: none; }
 .mini .hn.yd { font-size: 10px; letter-spacing: -.03em; }
 
+/* remove a player row */
+.prow { position: relative; }
+.prow-rm { position: absolute; top: -9px; right: -9px; width: 26px; height: 26px; padding: 0; border-radius: 50%; display: grid; place-items: center; font: 700 16px/1 var(--font); background: var(--bg); color: var(--muted); border: 1px solid var(--field-line); z-index: 1; }
+.prow-rm:hover, .prow-rm:focus-visible { color: #fff; background: #e5363d; border-color: #e5363d; }
+.rows-undo { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; padding: 8px 12px; border-radius: 10px; background: var(--bg); border: 1px dashed var(--field-line); }
+.rows-undo button.text { color: var(--accent); font-size: 14px; }
+body.agent .prow-rm { border-radius: 3px; color: #ff3355; border-color: #5a1a26; }
+body.agent .prow-rm:hover, body.agent .prow-rm:focus-visible { background: #ff3355; color: #050607; }
+body.agent .rows-undo { border-radius: 4px; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+body.clubhouse .prow-rm { border-radius: 2px; font-family: var(--serif); color: var(--accent); border-color: var(--brass-line); }
+body.clubhouse .rows-undo { border-radius: 2px; font-style: italic; font-family: var(--serif); }
+body.baby .prow-rm { background: #fff; color: #e0458d; border: 2px solid #ffc2df; }
+body.baby .prow-rm:hover, body.baby .prow-rm:focus-visible { background: #ff7eb6; border-color: #ff7eb6; color: #fff; }
+body.baby .rows-undo { border-radius: 16px; border-width: 2px; border-color: #ffc2df; }
+
 /* tee chooser */
 .tee-pick { display: grid; gap: 8px; padding: 12px; border-radius: 12px; border: 1px dashed var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .tee-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -431,7 +446,7 @@ body.baby .card-frame.has-photo label.photo::before { content: "📸"; }
 .prow .who .nm { font-weight: 800; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prow .tot { display: inline-block; font-weight: 800; font-size: 13px; padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--ink); margin-left: 6px; vertical-align: 2px; }
 .prow .tagstate { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prow select { grid-area: sel; font: 600 15px var(--font); padding: 8px 30px 8px 12px; border-radius: 999px; max-width: 150px; -webkit-appearance: none; appearance: none;
+.prow select { grid-area: sel; font: 600 14px var(--font); padding: 8px 28px 8px 12px; border-radius: 999px; width: auto; max-width: 124px; text-overflow: ellipsis; -webkit-appearance: none; appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; }
 .prow .chips { grid-area: holes; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; }
 .prow .chips span { text-align: center; font-size: 13px; font-weight: 700; padding: 4px 0; border-radius: 6px; background: var(--panel); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -452,7 +467,7 @@ body.agent .prow.none .tagstate { color: #ff3355; opacity: 1; }
 body.agent .prow.none .who { opacity: 1; }
 body.agent .prow.none .who .nm { background: #ff3355; color: #050607; padding: 0 4px; justify-self: start; }
 body.agent .prow .chips span { border-radius: 2px; }
-body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 128px; text-overflow: ellipsis; }
+body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 118px; }
 body.agent .prow.me { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0,255,136,.18); }
 /* clubhouse: members' register */
 body.clubhouse .rows-panel { border-radius: 2px; border-color: var(--brass-line); }
@@ -599,6 +614,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     <div class="rows-panel hidden" id="rowsPanel">
       <div><strong class="rp-title" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Attest each line before posting. Members you name will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
       <div id="rowsList"></div>
+      <div class="rows-undo hidden" id="rowsUndo" role="status" aria-live="polite"><span id="rowsUndoText"></span><button type="button" class="text" id="rowsUndoBtn">Undo</button></div>
     </div>
     <form id="roundForm" autocomplete="off">
       <div class="field">
@@ -676,6 +692,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   let formHoles = 18, chartHoles = 18, chartChosen = false;
   let players = [], pending = [];                  // player list; tagged rounds waiting for me
   let teeSets = [];   // yardage rows read off the last photo
+  let removedRow = null;   // last row removed from the card, for Undo
   let cardRows = [], rowAssign = [], cardPhoto = null, readId = 0, tagsSentFor = 0;
   let uploaded = { readId: -1, path: null };   // the current photo's storage path, uploaded once per photo
   let editingPending = null;
@@ -982,6 +999,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     setFormHoles(18);
     cardRows = []; rowAssign = []; cardPhoto = null; renderRows();
     teeSets = []; renderTeePick();
+    removedRow = null; renderRows();
     document.querySelector("label.photo").classList.remove("hidden");
     $("preview").classList.add("hidden"); $("preview").removeAttribute("src");
     setPhotoState();
@@ -1181,21 +1199,28 @@ body.baby .prow.none { border-color: #e6d9f5; }
     return hs.length === formHoles && hs.every(v => v != null) ? hs.reduce((a, b) => a + b, 0) : r.total_score;
   };
   function renderRows() {
-    $("rowsPanel").classList.toggle("hidden", !cardRows.length);
+    $("rowsPanel").classList.toggle("hidden", !cardRows.length && !removedRow);
+    $("rowsUndo").classList.toggle("hidden", !removedRow);
+    if (removedRow) $("rowsUndoText").textContent = ({ agent: `${removedRow.row.label} purged from the file.`, clubhouse: `${removedRow.row.label} struck from the card.`, baby: `Bye-bye, ${removedRow.row.label}! 👋` }[theme] || `Removed ${removedRow.row.label}.`);
     if (!cardRows.length) { $("rowsList").innerHTML = ""; return; }
     const me = myId();
-    const opts = [{ id: me, name: "Me" }, ...players.filter(p => p.user_id !== me).map(p => ({ id: p.user_id, name: p.name })), { id: "", name: "Not in the app" }];
+    const opts = [{ id: me, name: "Me" }, ...players.filter(p => p.user_id !== me).map(p => ({ id: p.user_id, name: p.name })), { id: "", name: "Guest" }];
     const STATE = {
-      agent: { me: "You // field agent", tagged: "Asset identified", none: "Unknown" },
+      agent: { me: "You", tagged: "Asset identified", none: "Unknown" },
       clubhouse: { me: "Yourself", tagged: "Member", none: "Guest" },
       baby: { me: "That's you! 🌟", tagged: "Friend 💕", none: "Mystery baby" },
     }[theme] || { me: "You", tagged: "Tagged", none: "Not in the app" };
-    $("rowsList").innerHTML = cardRows.map((r, i) => {
+    // Your own row always comes first; the rest keep their order on the card.
+    const order = cardRows.map((_, i) => i).sort((a, b) => (rowAssign[b] === me) - (rowAssign[a] === me) || a - b);
+    const rmLabel = { agent: "Purge", clubhouse: "Strike", baby: "Bye-bye" }[theme] || "Remove";
+    $("rowsList").innerHTML = order.map((i) => {
+      const r = cardRows[i];
       const tot = rowTotal(r), who = rowAssign[i] || "";
       const st = who === me ? "me" : who ? "tagged" : "none";
       const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles) : [];
       const initial = (String(r.label || "?").trim()[0] || "?").toUpperCase();
       return `<div class="prow ${st}">
+        <button type="button" class="prow-rm" data-rm="${i}" aria-label="${rmLabel} ${esc(r.label)}" title="${rmLabel}">×</button>
         <span class="av" aria-hidden="true">${esc(initial)}</span>
         <span class="who"><span class="nm">${esc(r.label)}${tot == null ? "" : `<span class="tot num">${tot}</span>`}</span><span class="tagstate">${esc(STATE[st])}</span></span>
         <select data-row="${i}" aria-label="Who is ${esc(r.label)}?">${opts.map(o => `<option value="${esc(o.id)}"${o.id === who ? " selected" : ""}>${esc(o.name)}</option>`).join("")}</select>
@@ -1215,6 +1240,24 @@ body.baby .prow.none { border-color: #e6d9f5; }
     if (Number.isFinite(tot)) $("score").value = tot;
     if (Number.isFinite(r.putts)) $("putts").value = r.putts;
   }
+  // Remove a row from this card: it won't be saved or tagged.
+  $("rowsList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rm]"); if (!b) return;
+    const i = Number(b.dataset.rm), wasMe = rowAssign[i] === myId();
+    removedRow = { row: cardRows[i], assign: rowAssign[i] || "", at: i };
+    cardRows.splice(i, 1); rowAssign.splice(i, 1);
+    renderRows();
+    if (wasMe) applyMyRow();
+  });
+  $("rowsUndoBtn").addEventListener("click", () => {
+    if (!removedRow) return;
+    const { row, assign, at } = removedRow;
+    if (assign) rowAssign = rowAssign.map(x => (x === assign ? "" : x));   // still one row per person
+    cardRows.splice(at, 0, row); rowAssign.splice(at, 0, assign);
+    removedRow = null;
+    renderRows();
+    if (assign === myId()) applyMyRow();
+  });
   $("rowsList").addEventListener("change", (e) => {
     const sel = e.target.closest("select[data-row]"); if (!sel) return;
     const i = Number(sel.dataset.row), v = sel.value, me = myId();
@@ -1444,7 +1487,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
       setIf("rating", num(out.course_rating), "rating");
       setIf("slope", num(out.slope_rating), "slope");
 
-      cardRows = Array.isArray(out.players) ? out.players : [];
+      cardRows = Array.isArray(out.players) ? out.players : []; removedRow = null;
       const known = new Set([myId(), ...players.map(p => p.user_id)]);
       rowAssign = cardRows.map(r => (r.user_id && known.has(r.user_id) ? r.user_id : ""));
       renderRows();
