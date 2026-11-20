@@ -346,6 +346,120 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 
 @media (max-width: 400px) { .grid2 { grid-template-columns: 1fr; } .tile .value { font-size: 26px; } .tile.main .value { font-size: 54px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ===== contrast pass: inputs get their own fill + a visible edge in every theme ===== */
+:root { --field: #ffffff; --field-line: #8e8e96; --muted: #5c5c66; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --field: #111113; --field-line: #4a4a52; } }
+:root[data-theme="dark"] { --field: #111113; --field-line: #4a4a52; }
+body.agent { --muted: #86b898; --field: #0b1611; --field-line: #2f6b4a; }
+body.clubhouse { --muted: #bccbc0; --field: #1b3428; --field-line: rgba(212,166,74,.6); }
+body.baby { --ink: #3a2856; --muted: #6f5899; --field: #ffffff; --field-line: #f06aa8; }
+body.signed-out { --field: transparent; --field-line: #3a3a3a; --muted: #9a9a9a; }
+input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], .hgrid input, .prow select {
+  background: var(--field); border: 1px solid var(--field-line); color: var(--ink);
+}
+input::placeholder { color: var(--muted); opacity: .85; }
+.hgrid input.par { background: transparent; border: 1px dashed var(--field-line); color: var(--ink); opacity: .8; }
+.hgrid .h, .hgrid .rl, .field label, .field .hint-label { color: var(--ink); }
+input:focus, .hgrid input:focus, .prow select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); outline: none; }
+body.agent input:focus, body.agent .hgrid input:focus { box-shadow: 0 0 0 3px rgba(0,255,136,.18), 0 0 14px rgba(0,255,136,.25); }
+body.baby input[type=text], body.baby input[type=number], body.baby input[type=date], body.baby .hgrid input { border-width: 2px; border-radius: 14px; }
+body.baby .hgrid input { border-radius: 10px; }
+body.baby .field label, body.baby .field .hint-label { font-weight: 600; }
+body.clubhouse .field label, body.clubhouse .field .hint-label { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; color: var(--accent); }
+body.agent .field label, body.agent .field .hint-label { text-transform: uppercase; letter-spacing: .12em; font-weight: 400; color: var(--accent); }
+.gate-form input[type=email], .gate-form input[type=password], .gate-form input[type=text] { background: transparent; border: 0; border-bottom: 1px solid var(--field-line); box-shadow: none; }
+
+/* ===== scorecard photo: full width, with "replace" docked underneath ===== */
+.card-frame { display: grid; }
+.card-frame:not(.has-photo) { display: contents; }
+.card-frame.has-photo { border-radius: 16px; overflow: hidden; background: var(--panel); border: 1px solid var(--field-line); }
+.card-frame.has-photo .preview { width: 100%; max-width: none; max-height: none; height: auto; border-radius: 0; }
+.card-frame.has-photo .preview-wrap.reading::after { border-radius: 0; }
+.card-frame.has-photo label.photo { order: 2; border: 0; border-top: 1px solid var(--field-line); border-radius: 0; padding: 12px 14px; background: var(--panel); justify-content: center; font-size: 14px; gap: 8px; }
+.card-frame.has-photo label.photo::before { content: "↻"; font-size: 16px; line-height: 1; }
+.card-frame.has-photo .preview-wrap { order: 1; }
+/* agent: evidence photo with viewfinder corners and a stamped caption */
+body.agent .card-frame.has-photo { border-radius: 4px; border-color: #1d3a2a; position: relative; }
+body.agent .card-frame.has-photo .preview-wrap::before { content: ""; position: absolute; inset: 10px; z-index: 1; pointer-events: none;
+  background: linear-gradient(var(--accent),var(--accent)) top left/18px 2px, linear-gradient(var(--accent),var(--accent)) top left/2px 18px,
+  linear-gradient(var(--accent),var(--accent)) top right/18px 2px, linear-gradient(var(--accent),var(--accent)) top right/2px 18px,
+  linear-gradient(var(--accent),var(--accent)) bottom left/18px 2px, linear-gradient(var(--accent),var(--accent)) bottom left/2px 18px,
+  linear-gradient(var(--accent),var(--accent)) bottom right/18px 2px, linear-gradient(var(--accent),var(--accent)) bottom right/2px 18px; background-repeat: no-repeat; }
+body.agent .card-frame.has-photo .preview-wrap::after { content: "EXHIBIT A // CLASSIFIED"; position: absolute; left: 16px; bottom: 14px; z-index: 1; font-size: 10px; letter-spacing: .2em; color: #fff; background: #ff3355; padding: 3px 7px; }
+body.agent .card-frame.has-photo .preview-wrap.reading::after { content: ""; inset: 0; left: 0; bottom: 0; padding: 0; background: linear-gradient(100deg, transparent 30%, rgba(0,255,136,.35) 50%, transparent 70%); background-size: 250% 100%; }
+body.agent .card-frame.has-photo label.photo { border-top: 1px dashed #2f6b4a; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 400; background: #07100b; }
+/* clubhouse: matted photograph in a brass rule, caption in serif italic */
+body.clubhouse .card-frame.has-photo { border-radius: 2px; padding: 8px; border: 1px solid var(--brass-line); box-shadow: inset 0 0 0 4px var(--panel), inset 0 0 0 5px var(--brass-line); }
+body.clubhouse .card-frame.has-photo label.photo { border-top: 0; padding: 12px 0 4px; font-family: var(--serif); font-style: italic; font-weight: 600; font-size: 16px; text-transform: none; letter-spacing: 0; }
+body.clubhouse .card-frame.has-photo label.photo::before { content: "—"; font-style: normal; }
+body.clubhouse .card-frame.has-photo label.photo::after { content: "—"; font-style: normal; }
+/* baby: a polaroid taped to the page */
+body.baby .card-frame.has-photo { background: #fff; border: 0; border-radius: 6px; padding: 12px 12px 0; overflow: visible; position: relative; transform: rotate(-.8deg); margin-inline: 4px; box-shadow: 0 6px 18px rgba(122,74,150,.18), 0 0 0 2px #ffd6ea; margin-top: 10px; }
+body.baby .card-frame.has-photo::before { content: ""; position: absolute; top: -12px; left: 50%; width: 92px; height: 24px; transform: translateX(-50%) rotate(3deg); background: repeating-linear-gradient(45deg, rgba(255,126,182,.75) 0 8px, rgba(255,182,214,.75) 8px 16px); border-radius: 3px; z-index: 2; }
+body.baby .card-frame.has-photo .preview { border-radius: 3px; }
+body.baby .card-frame.has-photo label.photo { background: #fff; border-top: 0; padding: 14px 0 16px; font-size: 16px; font-weight: 600; color: #e0458d; }
+body.baby .card-frame.has-photo label.photo::before { content: "📸"; }
+
+/* ===== who's who: one player card per row ===== */
+.rows-panel { gap: 14px; padding: 16px; background: var(--panel); border-color: var(--field-line); }
+.rows-panel .rp-title { font-size: 17px; font-weight: 800; display: block; margin-bottom: 2px; }
+#rowsList { display: grid; gap: 10px; }
+.prow { grid-template-columns: 40px 1fr auto; grid-template-areas: "av who sel" "holes holes holes"; gap: 8px 12px; padding: 12px; border: 1px solid var(--field-line); border-radius: 12px; background: var(--bg); transition: border-color .2s, box-shadow .2s, opacity .2s; }
+.prow .av { grid-area: av; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 17px; background: var(--line); color: var(--ink); }
+.prow .who { grid-area: who; display: grid; gap: 3px; min-width: 0; }
+.prow .who .nm { font-weight: 800; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .tot { display: inline-block; font-weight: 800; font-size: 13px; padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--ink); margin-left: 6px; vertical-align: 2px; }
+.prow .tagstate { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow select { grid-area: sel; font: 600 15px var(--font); padding: 8px 30px 8px 12px; border-radius: 999px; max-width: 150px; -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23888' stroke-width='2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; }
+.prow .chips { grid-area: holes; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 3px; }
+.prow .chips span { text-align: center; font-size: 13px; font-weight: 700; padding: 4px 0; border-radius: 6px; background: var(--panel); color: var(--ink); font-variant-numeric: tabular-nums; }
+.prow .chips span.e { color: var(--muted); }
+.prow.me { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.prow.me .av, .prow.me .tot { background: var(--accent); color: var(--on-accent); }
+.prow.me .tagstate, .prow.tagged .tagstate { color: var(--accent); }
+.prow.none { border-style: dashed; }
+.prow.none .who, .prow.none .chips, .prow.none .av { opacity: .6; }
+/* agent: dossier rows */
+body.agent .rows-panel { border-radius: 4px; background: #07100b; }
+body.agent .rows-panel .rp-title { font-weight: 400; text-transform: uppercase; letter-spacing: .14em; color: var(--accent); }
+body.agent .prow { border-radius: 4px; background: var(--bg); position: relative; }
+body.agent .prow .av { border-radius: 3px; background: repeating-linear-gradient(0deg, rgba(0,255,136,.12) 0 1px, transparent 1px 3px), #0e2017; color: var(--accent); border: 1px solid #2f6b4a; font-weight: 400; }
+body.agent .prow .who .nm { font-weight: 400; letter-spacing: .1em; }
+body.agent .prow .tagstate { text-transform: uppercase; letter-spacing: .16em; font-weight: 400; font-size: 11px; }
+body.agent .prow.none .tagstate { color: #ff3355; opacity: 1; }
+body.agent .prow.none .who { opacity: 1; }
+body.agent .prow.none .who .nm { background: #ff3355; color: #050607; padding: 0 4px; justify-self: start; }
+body.agent .prow .chips span { border-radius: 2px; }
+body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 128px; text-overflow: ellipsis; }
+body.agent .prow.me { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0,255,136,.18); }
+/* clubhouse: members' register */
+body.clubhouse .rows-panel { border-radius: 2px; border-color: var(--brass-line); }
+body.clubhouse .rows-panel .rp-title { font-family: var(--serif); font-size: 20px; font-weight: 700; }
+body.clubhouse .prow { border-radius: 2px; border-color: var(--line); }
+body.clubhouse .prow .av { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); font-family: var(--serif); font-size: 19px; font-weight: 700; }
+body.clubhouse .prow .who .nm { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+body.clubhouse .prow .tagstate { font-style: italic; font-weight: 600; font-family: var(--serif); font-size: 13px; }
+body.clubhouse .prow select { border-radius: 2px; }
+body.clubhouse .prow .chips span { border-radius: 1px; background: var(--field); }
+body.clubhouse .prow.me { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+body.clubhouse .prow.me .av { background: var(--accent); color: var(--on-accent); }
+/* baby: playdate cards */
+body.baby .rows-panel { border-radius: 24px; border: 3px dashed #ffc2df; background: #fff; }
+body.baby .rows-panel .rp-title { font-size: 19px; font-weight: 700; }
+body.baby .prow { border-radius: 20px; border-width: 2px; border-color: #ffd6ea; background: #fff8fc; }
+body.baby .prow:nth-child(4n+1) .av { background: #ffd6ea; } body.baby .prow:nth-child(4n+2) .av { background: #d4ecff; }
+body.baby .prow:nth-child(4n+3) .av { background: #fff1b8; } body.baby .prow:nth-child(4n+4) .av { background: #d9f5df; }
+body.baby .prow .av { font-weight: 700; font-size: 18px; color: var(--ink); border: 2px solid #fff; box-shadow: 0 0 0 2px #ffd6ea; }
+body.baby .prow .who .nm { font-weight: 700; }
+body.baby .prow .chips span { border-radius: 999px; background: #e8f4ff; }
+body.baby .prow.me { border-color: #ff7eb6; box-shadow: 0 0 0 3px #ffe0ef; }
+body.baby .prow.me .av { background: #ff7eb6 !important; color: #fff; }
+body.baby .prow.me .tagstate, body.baby .prow.tagged .tagstate { color: #e0458d; }
+body.baby .prow.none { border-color: #e6d9f5; }
+@media (prefers-reduced-motion: no-preference) { body.baby .prow.me .av { animation: babyBounce .5s cubic-bezier(.3,1.6,.6,1); } }
+@keyframes babyBounce { from { transform: scale(.6); } to { transform: scale(1); } }
 </style>
 
 </head>
@@ -450,18 +564,20 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       <h1 id="sheetTitle" data-baby="Tell Us About Your Round, Sweetie 🍼" data-agent="File after-action report">Log a round</h1>
       <button type="button" class="ghost small" id="closeAdd">Close</button>
     </div>
-    <label class="photo" for="photo">
-      <span id="photoLabel">Add scorecard photo</span>
-      <input type="file" id="photo" accept="image/*">
-    </label>
-    <div class="preview-wrap" id="previewWrap"><img id="preview" class="preview hidden" alt="Scorecard photo"></div>
+    <div class="card-frame" id="cardFrame">
+      <label class="photo" for="photo">
+        <span id="photoLabel">Add scorecard photo</span>
+        <input type="file" id="photo" accept="image/*">
+      </label>
+      <div class="preview-wrap" id="previewWrap"><img id="preview" class="preview hidden" alt="Scorecard photo"></div>
+    </div>
     <div class="reader hidden" id="reader" role="status" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
       <div><strong>Reading your scorecard…</strong><span class="meta num" id="readerTime">Usually 10–40 seconds</span></div>
     </div>
     <div id="readStatus" class="status" aria-live="polite"></div>
     <div class="rows-panel hidden" id="rowsPanel">
-      <div><strong>Who's who on this card</strong><p class="meta">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
+      <div><strong class="rp-title" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Attest each line before posting. Members you name will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
       <div id="rowsList"></div>
     </div>
     <form id="roundForm" autocomplete="off">
@@ -786,9 +902,19 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     cardRows = []; rowAssign = []; cardPhoto = null; renderRows();
     document.querySelector("label.photo").classList.remove("hidden");
     $("preview").classList.add("hidden"); $("preview").removeAttribute("src");
-    $("photoLabel").textContent = "Add scorecard photo";
+    setPhotoState();
     $("readStatus").textContent = ""; $("readStatus").classList.remove("err");
     $("formStatus").textContent = "";
+  }
+  function photoLabelText() {
+    const has = !$("preview").classList.contains("hidden");
+    return has
+      ? ({ agent: "Replace evidence", clubhouse: "Replace card", baby: "Different picture?" }[theme] || "Replace photo")
+      : ({ agent: "Upload scorecard intel", clubhouse: "Add the scorecard", baby: "Add a picture of your card 📸" }[theme] || "Add scorecard photo");
+  }
+  function setPhotoState() {
+    $("cardFrame").classList.toggle("has-photo", !$("preview").classList.contains("hidden"));
+    $("photoLabel").textContent = photoLabelText();
   }
   function sheetTitleText() {
     if (editingPending) return { baby: "Is This Your Round? 🍼", agent: "Verify intel", clubhouse: "Attest card" }[theme] || "Review tagged round";
@@ -959,13 +1085,21 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     if (!cardRows.length) { $("rowsList").innerHTML = ""; return; }
     const me = myId();
     const opts = [{ id: me, name: "Me" }, ...players.filter(p => p.user_id !== me).map(p => ({ id: p.user_id, name: p.name })), { id: "", name: "Not in the app" }];
+    const STATE = {
+      agent: { me: "You // field agent", tagged: "Asset identified", none: "Unknown" },
+      clubhouse: { me: "Yourself", tagged: "Member", none: "Guest" },
+      baby: { me: "That's you! 🌟", tagged: "Friend 💕", none: "Mystery baby" },
+    }[theme] || { me: "You", tagged: "Tagged", none: "Not in the app" };
     $("rowsList").innerHTML = cardRows.map((r, i) => {
-      const tot = rowTotal(r);
-      const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles).map(v => v ?? "–").join(" ") : "";
-      return `<div class="prow">
-        <span class="who">${esc(r.label)}<span class="num">${tot ?? "–"}</span></span>
-        <select data-row="${i}" aria-label="Who is ${esc(r.label)}?">${opts.map(o => `<option value="${esc(o.id)}"${o.id === (rowAssign[i] || "") ? " selected" : ""}>${esc(o.name)}</option>`).join("")}</select>
-        ${hs ? `<span class="pholes num">${esc(hs)}</span>` : ""}
+      const tot = rowTotal(r), who = rowAssign[i] || "";
+      const st = who === me ? "me" : who ? "tagged" : "none";
+      const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, formHoles) : [];
+      const initial = (String(r.label || "?").trim()[0] || "?").toUpperCase();
+      return `<div class="prow ${st}">
+        <span class="av" aria-hidden="true">${esc(initial)}</span>
+        <span class="who"><span class="nm">${esc(r.label)}${tot == null ? "" : `<span class="tot num">${tot}</span>`}</span><span class="tagstate">${esc(STATE[st])}</span></span>
+        <select data-row="${i}" aria-label="Who is ${esc(r.label)}?">${opts.map(o => `<option value="${esc(o.id)}"${o.id === who ? " selected" : ""}>${esc(o.name)}</option>`).join("")}</select>
+        ${hs.length ? `<span class="chips num" aria-label="Hole scores">${hs.map(v => v == null ? '<span class="e">–</span>' : `<span>${esc(v)}</span>`).join("")}</span>` : ""}
       </div>`;
     }).join("");
   }
@@ -1253,7 +1387,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
     if (!f || reading) return;
     const p = $("preview");
     p.src = URL.createObjectURL(f); p.classList.remove("hidden");
-    $("photoLabel").textContent = "Replace photo";
+    setPhotoState();
     readCard(f);
     e.target.value = "";
   });
@@ -1309,7 +1443,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
       el.textContent = (theme && el.dataset[theme]) || el.dataset.adult;
     });
     document.querySelectorAll("#themeMenu [data-pick]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.pick === theme)));
-    if (!$("addCard").classList.contains("hidden")) $("sheetTitle").textContent = sheetTitleText();
+    if (!$("addCard").classList.contains("hidden")) { $("sheetTitle").textContent = sheetTitleText(); setPhotoState(); renderRows(); }
   }
   function toggleThemeMenu(open) {
     $("themeMenu").classList.toggle("hidden", !open);
