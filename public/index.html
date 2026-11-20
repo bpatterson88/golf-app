@@ -652,7 +652,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   let sb = null, cfg = null, session = null;
   const fromRound = (r) => ({ id: r.id, course: r.course, date: r.played_on, tees: r.tees || "", holes: r.holes, score: r.score,
     rating: r.rating == null ? null : Number(r.rating), slope: r.slope, putts: r.putts,
-    holeScores: Array.isArray(r.hole_scores) ? r.hole_scores : null, pars: Array.isArray(r.pars) ? r.pars : null, yardages: Array.isArray(r.yardages) ? r.yardages : null, createdAt: Date.parse(r.created_at) || 0 });
+    holeScores: Array.isArray(r.hole_scores) ? r.hole_scores : null, pars: Array.isArray(r.pars) ? r.pars : null, yardages: Array.isArray(r.yardages) ? r.yardages : null, photoPath: r.photo_path || null, createdAt: Date.parse(r.created_at) || 0 });
   const fromCourse = (c) => ({ name: c.name, tees: c.tees || "", holes: c.holes, rating: c.rating == null ? null : Number(c.rating), slope: c.slope, pars: Array.isArray(c.pars) ? c.pars : null, yardages: Array.isArray(c.yardages) ? c.yardages : null });
   async function loadData() {
     if (!sb || !session) return;
@@ -677,6 +677,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   let players = [], pending = [];                  // player list; tagged rounds waiting for me
   let teeSets = [];   // yardage rows read off the last photo
   let cardRows = [], rowAssign = [], cardPhoto = null, readId = 0, tagsSentFor = 0;
+  let uploaded = { readId: -1, path: null };   // the current photo's storage path, uploaded once per photo
   let editingPending = null;
   const myId = () => (session && session.user ? session.user.id : "");
   const playerName = (id) => { const p = players.find(x => x.user_id === id); return p ? p.name : "Someone"; };
@@ -1013,8 +1014,9 @@ body.baby .prow.none { border-color: #e6d9f5; }
     if (pend) {
       document.querySelector("label.photo").classList.add("hidden");
       r = { course: pend.course, date: pend.played_on, tees: pend.tees, holes: pend.holes, holeScores: pend.hole_scores, pars: pend.pars, yardages: pend.yardages,
-            score: pend.score, rating: pend.rating == null ? null : Number(pend.rating), slope: pend.slope, putts: pend.putts };
+            score: pend.score, rating: pend.rating == null ? null : Number(pend.rating), slope: pend.slope, putts: pend.putts, photoPath: pend.photo_path };
     }
+    if (r && r.photoPath) showSavedPhoto(r.photoPath, r);
     if (r) {
       $("course").value = r.course || "";
       $("date").value = r.date || todayStr();
@@ -1032,6 +1034,25 @@ body.baby .prow.none { border-color: #e6d9f5; }
     document.body.style.overflow = "hidden"; $("toggleAdd").classList.add("hidden");
   }
   $("toggleAdd").addEventListener("click", () => openSheet(null));
+  // Load a round's saved scorecard photo into the sheet (signed link, valid 10 minutes).
+  async function showSavedPhoto(path, forRound) {
+    const { data, error } = await sb.storage.from("scorecards").createSignedUrl(path, 600);
+    if (error || !data) { console.warn("photo link", error); return; }
+    const sameSheet = (editing && editing === forRound) || (editingPending && editingPending.photo_path === path);
+    if (!sameSheet || $("addCard").classList.contains("hidden") || cardPhoto) return;   // closed, or a new photo was picked meanwhile
+    const p = $("preview"); p.src = data.signedUrl; p.classList.remove("hidden");
+    setPhotoState();
+  }
+  // Upload the photo just read, once; later saves reuse the same path.
+  async function uploadCardPhoto(me) {
+    if (!cardPhoto) return null;
+    if (uploaded.readId === readId) return uploaded.path;
+    const path = `${me}/${crypto.randomUUID()}.jpg`;
+    const up = await sb.storage.from("scorecards").upload(path, cardPhoto, { contentType: "image/jpeg" });
+    if (up.error) { console.warn("photo upload", up.error); return null; }
+    uploaded = { readId, path };
+    return path;
+  }
   function closeSheet() { editing = null; editingPending = null; $("addCard").classList.add("hidden"); document.body.style.overflow = ""; $("toggleAdd").classList.remove("hidden"); }
   $("cancelBtn").addEventListener("click", closeSheet);
   $("closeAdd").addEventListener("click", closeSheet);
@@ -1102,12 +1123,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
       // Send tags first (once per photo), so a retry after a failure doesn't send them twice.
       let sentTo = [];
       if (tagged.length && tagsSentFor !== readId) {
-        let photoPath = null;
-        if (cardPhoto) {
-          const path = `${me}/${crypto.randomUUID()}.jpg`;
-          const up = await sb.storage.from("scorecards").upload(path, cardPhoto, { contentType: "image/jpeg" });
-          if (!up.error) photoPath = path; else console.warn("photo upload", up.error);
-        }
+        const photoPath = await uploadCardPhoto(me);
         const list = tagged.map(({ r, to }) => {
           const hs = Array.isArray(r.hole_scores) ? r.hole_scores.slice(0, holes) : null;
           const tot = rowTotal(r);
@@ -1126,6 +1142,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
       }
 
       if (ownRound) {
+        if (cardPhoto) { const path = await uploadCardPhoto(me); if (path) row.photo_path = path; }   // new photo only; editing without one keeps the old
         const { error } = editing
           ? await sb.from("rounds").update(row).eq("id", editing.id)
           : await sb.from("rounds").insert(row);
