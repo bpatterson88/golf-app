@@ -69,20 +69,21 @@ body.baby {
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
 
-/* clubhouse mode: light and easy to read. Neutral stone page with faint mowing stripes, white cards, navy accent, sand highlights. */
+/* clubhouse mode: bright and playful. Cream page with a golf-ball dimple texture, chunky white cards, bold accent, coral accent. */
 body.clubhouse {
-  --bg: #f4f3f0; --panel: #ffffff; --ink: #1b1e22; --muted: #5d636b; --line: #e3e1dc;
-  --accent: #1f3a5c; --on-accent: #ffffff; --soft: #efe8d8; --on-soft: #5a4a26;
-  --birdie: #7ccf96; --par: #a8cdee; --bogey: #f3d27a; --double: #f2a56c; --triple: #ee7d74;
+  --bg: #fdf8f0; --panel: #ffffff; --ink: #1d1b26; --muted: #5f5b6b; --line: #ede6d9;
+  --accent: #f0443a; --on-accent: #ffffff; --soft: #dcefff; --on-soft: #1d5fa6;
+  --birdie: #6fd08f; --par: #9fcbf2; --bogey: #ffd166; --double: #ffa264; --triple: #ff7a70;
   color-scheme: light;
-  background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0 56px, transparent 56px 112px);
+  background-image: radial-gradient(rgba(29,27,38,.06) 1.5px, transparent 1.7px); background-size: 18px 18px;
 }
-body.clubhouse header { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-body.clubhouse h1 { color: var(--accent); }
-body.clubhouse .card { border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(27,30,34,.04), 0 6px 16px rgba(27,30,34,.04); }
+body.clubhouse h1 { font-size: 32px; letter-spacing: -0.03em; }
+body.clubhouse h1::after { content: ""; display: inline-block; width: .32em; height: .32em; margin-left: .12em; border-radius: 50%; background: var(--accent); }
+body.clubhouse .card { border-radius: 22px; border: 1.5px solid var(--line); box-shadow: 0 4px 0 var(--line); }
 body.clubhouse button.ghost { background: var(--soft); color: var(--on-soft); }
-body.clubhouse .fab { box-shadow: 0 8px 22px rgba(31,58,92,.3); }
-body.clubhouse .theme-menu { box-shadow: 0 8px 24px rgba(27,30,34,.12); }
+body.clubhouse .fab { box-shadow: 0 5px 0 color-mix(in srgb, var(--accent) 65%, #000), 0 10px 22px rgba(29,27,38,.18); }
+body.clubhouse .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+body.clubhouse .theme-menu { border-radius: 16px; box-shadow: 0 8px 24px rgba(29,27,38,.14); }
 body.clubhouse .pill.soft { background: var(--soft); color: var(--on-soft); }
 
 /* colorblind-friendly score colors (Okabe-Ito based), for accounts in COLORBLIND_HASHES; works with every theme */
@@ -333,7 +334,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --field: #111113; --field-line: #4a4a52; } }
 :root[data-theme="dark"] { --field: #111113; --field-line: #4a4a52; }
 body.agent { --muted: #86b898; --field: #0b1611; --field-line: #2f6b4a; }
-body.clubhouse { --field: #ffffff; --field-line: #8c8f94; }
+body.clubhouse { --field: #ffffff; --field-line: #a39d92; }
 body.baby { --ink: #3a2856; --muted: #6f5899; --field: #ffffff; --field-line: #f06aa8; }
 body.signed-out { --field: transparent; --field-line: #3a3a3a; --muted: #9a9a9a; }
 input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], .hgrid input, .prow select {
@@ -440,7 +441,7 @@ body.agent .prow.none .who .nm { background: #ff3355; color: #050607; padding: 0
 body.agent .prow .chips span { border-radius: 2px; }
 body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 118px; }
 body.agent .prow.me { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0,255,136,.18); }
-/* clubhouse: sand initials */
+/* clubhouse: tinted initials */
 body.clubhouse .prow .av { background: var(--soft); color: var(--on-soft); }
 /* baby: playdate cards */
 body.baby .rows-panel { border-radius: 24px; border: 3px dashed #ffc2df; background: #fff; }
@@ -1526,7 +1527,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
   const COLORBLIND_HASHES = ["c6ee4741717bc589fa9560d27d3e992310f0a6e69910814e9d44036b13cdfde3"];
   const THEMES = ["agent", "clubhouse", "baby"];
-  const THEME_COLORS = { agent: "#050607", clubhouse: "#f4f3f0", baby: "#fff4fa" };
+  const THEME_COLORS = { agent: "#050607", clubhouse: "#fdf8f0", baby: "#fff4fa" };
   let theme = "", codename = "";
   const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
