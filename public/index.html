@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: white page, soft gray panels, one bright blue accent; summary first, then trend, scoring, records, log. Logging opens as a full-screen sheet. */
 :root {
@@ -69,28 +69,21 @@ body.baby {
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
 
-/* clubhouse mode: light and easy to read. Warm off-white page with faint mowing stripes, white scorecard-style cards, fairway-green accent. */
+/* clubhouse mode: light and easy to read. Neutral stone page with faint mowing stripes, white cards, navy accent, sand highlights. */
 body.clubhouse {
-  --bg: #f6f5f0; --panel: #ffffff; --ink: #1d2420; --muted: #5b6660; --line: #e4e1d8;
-  --accent: #1f6b45; --on-accent: #ffffff; --green-soft: #e7f0e9;
+  --bg: #f4f3f0; --panel: #ffffff; --ink: #1b1e22; --muted: #5d636b; --line: #e3e1dc;
+  --accent: #1f3a5c; --on-accent: #ffffff; --soft: #efe8d8; --on-soft: #5a4a26;
   --birdie: #7ccf96; --par: #a8cdee; --bogey: #f3d27a; --double: #f2a56c; --triple: #ee7d74;
-  --serif: "Fraunces", Georgia, "Times New Roman", serif;
   color-scheme: light;
-  background-image: repeating-linear-gradient(90deg, rgba(31,107,69,.03) 0 56px, transparent 56px 112px);
+  background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0 56px, transparent 56px 112px);
 }
 body.clubhouse header { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-body.clubhouse h1 { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-spacing: -0.01em; color: var(--accent); }
-body.clubhouse h2 { font-weight: 700; letter-spacing: -0.01em; }
-body.clubhouse .card { border-radius: 14px; border: 1px solid var(--line); border-top: 3px solid var(--accent); box-shadow: 0 1px 2px rgba(29,36,32,.04), 0 6px 16px rgba(29,36,32,.04); }
-body.clubhouse .tile.main .value { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; }
-body.clubhouse button { border-radius: 10px; }
-body.clubhouse button.ghost { background: var(--green-soft); color: var(--accent); }
-body.clubhouse button.text, body.clubhouse .theme-menu button { border-radius: 8px; }
-body.clubhouse .seg { border-radius: 10px; }
-body.clubhouse .seg button { border-radius: 8px; }
-body.clubhouse .fab { border-radius: 999px; box-shadow: 0 8px 22px rgba(31,107,69,.3); }
-body.clubhouse .theme-menu { box-shadow: 0 8px 24px rgba(29,36,32,.12); }
-body.clubhouse .pill.soft { background: var(--green-soft); color: var(--accent); }
+body.clubhouse h1 { color: var(--accent); }
+body.clubhouse .card { border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(27,30,34,.04), 0 6px 16px rgba(27,30,34,.04); }
+body.clubhouse button.ghost { background: var(--soft); color: var(--on-soft); }
+body.clubhouse .fab { box-shadow: 0 8px 22px rgba(31,58,92,.3); }
+body.clubhouse .theme-menu { box-shadow: 0 8px 24px rgba(27,30,34,.12); }
+body.clubhouse .pill.soft { background: var(--soft); color: var(--on-soft); }
 
 /* colorblind-friendly score colors (Okabe-Ito based), for accounts in COLORBLIND_HASHES; works with every theme */
 body.cb { --birdie: #0072b2; --par: #56b4e9; --bogey: #f0e442; --double: #e69f00; --triple: #d55e00; }
@@ -340,7 +333,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --field: #111113; --field-line: #4a4a52; } }
 :root[data-theme="dark"] { --field: #111113; --field-line: #4a4a52; }
 body.agent { --muted: #86b898; --field: #0b1611; --field-line: #2f6b4a; }
-body.clubhouse { --field: #ffffff; --field-line: #8f8a7a; }
+body.clubhouse { --field: #ffffff; --field-line: #8c8f94; }
 body.baby { --ink: #3a2856; --muted: #6f5899; --field: #ffffff; --field-line: #f06aa8; }
 body.signed-out { --field: transparent; --field-line: #3a3a3a; --muted: #9a9a9a; }
 input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], .hgrid input, .prow select {
@@ -447,8 +440,8 @@ body.agent .prow.none .who .nm { background: #ff3355; color: #050607; padding: 0
 body.agent .prow .chips span { border-radius: 2px; }
 body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 118px; }
 body.agent .prow.me { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0,255,136,.18); }
-/* clubhouse: soft green initials */
-body.clubhouse .prow .av { background: var(--green-soft); color: var(--accent); }
+/* clubhouse: sand initials */
+body.clubhouse .prow .av { background: var(--soft); color: var(--on-soft); }
 /* baby: playdate cards */
 body.baby .rows-panel { border-radius: 24px; border: 3px dashed #ffc2df; background: #fff; }
 body.baby .rows-panel .rp-title { font-size: 19px; font-weight: 700; }
@@ -1533,7 +1526,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
   const COLORBLIND_HASHES = ["c6ee4741717bc589fa9560d27d3e992310f0a6e69910814e9d44036b13cdfde3"];
   const THEMES = ["agent", "clubhouse", "baby"];
-  const THEME_COLORS = { agent: "#050607", clubhouse: "#f6f5f0", baby: "#fff4fa" };
+  const THEME_COLORS = { agent: "#050607", clubhouse: "#f4f3f0", baby: "#fff4fa" };
   let theme = "", codename = "";
   const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
