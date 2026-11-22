@@ -69,10 +69,10 @@ body.baby {
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
 
-/* clubhouse mode: bright and playful. Cream page with a golf-ball dimple texture, chunky white cards, bold accent, coral accent. */
+/* clubhouse mode: bright and playful. Cream page with a golf-ball dimple texture, chunky white cards, bold accent, grass-green accent. */
 body.clubhouse {
   --bg: #fdf8f0; --panel: #ffffff; --ink: #1d1b26; --muted: #5f5b6b; --line: #ede6d9;
-  --accent: #f0443a; --on-accent: #ffffff; --soft: #dcefff; --on-soft: #1d5fa6;
+  --accent: #1fa443; --on-accent: #ffffff; --soft: #dcefff; --on-soft: #1d5fa6;
   --birdie: #6fd08f; --par: #9fcbf2; --bogey: #ffd166; --double: #ffa264; --triple: #ff7a70;
   color-scheme: light;
   background-image: radial-gradient(rgba(29,27,38,.06) 1.5px, transparent 1.7px); background-size: 18px 18px;
@@ -103,6 +103,18 @@ body.cb .mini .s.bogey, body.cb .mini .s.double, body.cb .mini .s.triple { borde
 
 /* theme picker */
 .head-actions { display: flex; align-items: center; gap: 2px; position: relative; }
+.avatar { width: 40px; height: 40px; padding: 0; border-radius: 50%; display: grid; place-items: center; font: 800 17px/1 var(--font); background: var(--accent); color: var(--on-accent); }
+.avatar[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
+body.agent .avatar { border-radius: 4px; font-weight: 400; }
+body.clubhouse .avatar { box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 65%, #000); }
+body.clubhouse .avatar[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--accent); }
+.menu-who { padding: 8px 12px 10px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu-who strong { display: block; color: var(--ink); font-size: 15px; }
+.menu-who:empty { display: none; }
+.menu-label { padding: 4px 12px 2px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.menu-sep { height: 1px; background: var(--line); margin: 4px 0; }
+.head-actions .theme-menu { min-width: 250px; max-width: calc(100vw - 32px); }
+.theme-menu .menu-signout { color: var(--ink); }
 .theme-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; display: grid; gap: 4px; padding: 6px; min-width: 170px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
 .theme-menu.hidden { display: none; }
 .theme-menu button { background: transparent; color: var(--ink); text-align: left; border-radius: 8px; padding: 9px 12px; font-size: 14px; }
@@ -479,13 +491,16 @@ body.baby .prow.none { border-color: #e6d9f5; }
       <span class="meta num" id="headMeta">Your rounds and stats</span>
     </div>
     <div class="head-actions app-only">
-      <button type="button" class="text" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu">Theme</button>
-      <div class="theme-menu hidden" id="themeMenu" role="menu" aria-label="Theme">
+      <button type="button" class="avatar" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu" aria-label="Account and theme"><span id="avatarInitial" aria-hidden="true">·</span></button>
+      <div class="theme-menu hidden" id="themeMenu" role="menu" aria-label="Account and theme">
+        <div class="menu-who" id="menuWho"></div>
+        <div class="menu-label">Theme</div>
         <button type="button" role="menuitemradio" data-pick="agent" aria-checked="false">Agent</button>
         <button type="button" role="menuitemradio" data-pick="clubhouse" aria-checked="false">Clubhouse</button>
         <button type="button" role="menuitemradio" data-pick="baby" aria-checked="false">Baby 🍼</button>
+        <div class="menu-sep" role="separator"></div>
+        <button type="button" role="menuitem" class="menu-signout" id="signOutBtn" data-baby="Nap time 😴" data-agent="Go dark">Sign out</button>
       </div>
-      <button type="button" class="text" id="signOutBtn" data-baby="Nap time 😴" data-agent="Go dark">Sign out</button>
     </div>
   </header>
 
@@ -652,6 +667,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
       sb.from("pending_scores").select("*").eq("to_user", session.user.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     players = r3.error ? [] : (r3.data || []).filter(p => p.name);
+    setAvatar();
     pending = r4.error ? [] : (r4.data || []);
     renderInbox();
     if (r1.error) { banner("Couldn't load your rounds. Check your connection and reload.", true); return; }
@@ -670,6 +686,13 @@ body.baby .prow.none { border-color: #e6d9f5; }
   let uploaded = { readId: -1, path: null };   // the current photo's storage path, uploaded once per photo
   let editingPending = null;
   const myId = () => (session && session.user ? session.user.id : "");
+  function setAvatar() {
+    const email = (session && session.user && session.user.email) || "";
+    const mine = players.find(x => x.user_id === myId());
+    const name = (mine && mine.name) || "";
+    $("avatarInitial").textContent = ((name || email).trim()[0] || "·").toUpperCase();
+    $("menuWho").innerHTML = email ? (name ? `<strong>${esc(name)}</strong>${esc(email)}` : esc(email)) : "";
+  }
   const playerName = (id) => { const p = players.find(x => x.user_id === id); return p ? p.name : "Someone"; };
   const normLabel = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 40);
   let editing = null, reading = false;
@@ -1593,7 +1616,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     const { data } = await sb.from("profiles").select("theme").eq("user_id", sess.user.id).maybeSingle();
     applyTheme(data && THEMES.includes(data.theme) ? data.theme : await defaultTheme(sess));
     document.body.classList.remove("signed-out", "booting");
-    $("headMeta").textContent = sess.user.email || "Your rounds and stats";
+    setAvatar();
     await loadData();
   }
 
@@ -1626,7 +1649,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     $("pwToggle").setAttribute("aria-pressed", String(show));
     $("pwToggle").setAttribute("aria-label", show ? "Hide password" : "Show password");
   });
-  $("signOutBtn").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); });
+  $("signOutBtn").addEventListener("click", async () => { toggleThemeMenu(false); if (sb) await sb.auth.signOut(); });
 
   // ---------- chat ----------
   let chat = [], chatBusy = false;
