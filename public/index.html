@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Share+Tech+Mono&family=Fredoka:wght@400;600;700&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: white page, soft gray panels, one bright blue accent; summary first, then trend, scoring, records, log. Logging opens as a full-screen sheet. */
 :root {
@@ -69,36 +69,28 @@ body.baby {
 body.baby .card { border-radius: 28px; border: 3px dashed #ffc2df; }
 body.baby h1, body.baby h2 { letter-spacing: 0; }
 
-/* clubhouse mode: private members' club. Serif display type, square stationery cards, brass hairlines. */
+/* clubhouse mode: light and easy to read. Warm off-white page with faint mowing stripes, white scorecard-style cards, fairway-green accent. */
 body.clubhouse {
-  --bg: #0e1d16; --panel: #13251c; --ink: #f2eee3; --muted: #93a99b; --line: #25392e;
-  --accent: #d4a64a; --on-accent: #1b1405;
-  --brass-line: rgba(212,166,74,.42);
-  --birdie: #8fd6a2; --par: #9cc6e8; --bogey: #ecca78; --double: #e48a52; --triple: #e0534d;
-  --serif: "Playfair Display", Georgia, "Times New Roman", serif;
-  color-scheme: dark;
-  background-image:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.06) 0 1px, transparent 1px 4px);
+  --bg: #f6f5f0; --panel: #ffffff; --ink: #1d2420; --muted: #5b6660; --line: #e4e1d8;
+  --accent: #1f6b45; --on-accent: #ffffff; --green-soft: #e7f0e9;
+  --birdie: #7ccf96; --par: #a8cdee; --bogey: #f3d27a; --double: #f2a56c; --triple: #ee7d74;
+  --serif: "Fraunces", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+  background-image: repeating-linear-gradient(90deg, rgba(31,107,69,.03) 0 56px, transparent 56px 112px);
 }
-body.clubhouse header { padding-bottom: 18px; border-bottom: 1px solid var(--brass-line); }
-body.clubhouse h1 { font-family: var(--serif); font-weight: 700; font-size: 34px; letter-spacing: 0; }
-body.clubhouse header .meta { text-transform: uppercase; letter-spacing: .16em; font-size: 11px; font-weight: 600; margin-top: 4px; }
-body.clubhouse h2 { font-family: var(--serif); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .18em; color: var(--accent); }
-body.clubhouse .card { border-radius: 2px; padding: 24px; border: 1px solid var(--line); box-shadow: inset 0 0 0 5px var(--panel), inset 0 0 0 6px var(--brass-line); }
-body.clubhouse .tile .label { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; }
-body.clubhouse .tile .value { font-family: var(--serif); font-weight: 600; letter-spacing: 0; font-variant-numeric: lining-nums tabular-nums; }
-body.clubhouse .tile.main .value { font-size: 72px; line-height: 1; }
-body.clubhouse button { border-radius: 2px; text-transform: uppercase; letter-spacing: .14em; font-size: 13px; }
-body.clubhouse button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px rgba(242,238,227,.35); }
-body.clubhouse button.text, body.clubhouse .toggle-card, body.clubhouse .theme-menu button { text-transform: none; letter-spacing: 0; }
-body.clubhouse .theme-menu button { font-size: 14px; }
-body.clubhouse .seg, body.clubhouse .seg button { border-radius: 2px; }
-body.clubhouse .seg button { font-size: 11px; }
-body.clubhouse .fab { box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.18); }
-body.clubhouse input[type=text], body.clubhouse input[type=number], body.clubhouse input[type=date], body.clubhouse input[type=email], body.clubhouse input[type=password] { border-radius: 2px; border-color: var(--line); }
-body.clubhouse label.photo { border-radius: 2px; border-color: var(--brass-line); }
-body.clubhouse .theme-menu, body.clubhouse .banner, body.clubhouse .pill, body.clubhouse .preview { border-radius: 2px; }
+body.clubhouse header { padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+body.clubhouse h1 { font-family: var(--serif); font-weight: 600; font-size: 32px; letter-spacing: -0.01em; color: var(--accent); }
+body.clubhouse h2 { font-weight: 700; letter-spacing: -0.01em; }
+body.clubhouse .card { border-radius: 14px; border: 1px solid var(--line); border-top: 3px solid var(--accent); box-shadow: 0 1px 2px rgba(29,36,32,.04), 0 6px 16px rgba(29,36,32,.04); }
+body.clubhouse .tile.main .value { font-family: var(--serif); font-weight: 600; letter-spacing: -0.02em; }
+body.clubhouse button { border-radius: 10px; }
+body.clubhouse button.ghost { background: var(--green-soft); color: var(--accent); }
+body.clubhouse button.text, body.clubhouse .theme-menu button { border-radius: 8px; }
+body.clubhouse .seg { border-radius: 10px; }
+body.clubhouse .seg button { border-radius: 8px; }
+body.clubhouse .fab { border-radius: 999px; box-shadow: 0 8px 22px rgba(31,107,69,.3); }
+body.clubhouse .theme-menu { box-shadow: 0 8px 24px rgba(29,36,32,.12); }
+body.clubhouse .pill.soft { background: var(--green-soft); color: var(--accent); }
 
 /* colorblind-friendly score colors (Okabe-Ito based), for accounts in COLORBLIND_HASHES; works with every theme */
 body.cb { --birdie: #0072b2; --par: #56b4e9; --bogey: #f0e442; --double: #e69f00; --triple: #d55e00; }
@@ -256,7 +248,6 @@ details[open] summary { margin-bottom: 4px; }
 .prow .who .num { font-weight: 800; margin-left: 6px; }
 .prow .pholes { grid-column: 1 / -1; font-size: 13px; color: var(--muted); letter-spacing: .03em; }
 .prow select { font: 15px var(--font); padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 170px; }
-body.clubhouse .rows-panel, body.clubhouse .prow select { border-radius: 2px; }
 body.agent .rows-panel, body.agent .prow select { border-radius: 4px; }
 
 /* tagged rounds inbox */
@@ -287,8 +278,6 @@ body.cb .mini.edit input.eagle, body.cb .mini.edit input.birdie { color: #ffffff
 .toast.show .tick { transform: scale(1); transition: transform .4s cubic-bezier(.18,1.6,.4,1) .12s; }
 .toast .tick path { stroke-dasharray: 20; stroke-dashoffset: 20; }
 .toast.show .tick path { stroke-dashoffset: 0; transition: stroke-dashoffset .35s ease .3s; }
-body.clubhouse .toast { border-radius: 2px; letter-spacing: .04em; }
-body.clubhouse .toast .tick { border-radius: 2px; }
 body.agent .toast { border-radius: 4px; background: var(--accent); color: var(--on-accent); text-transform: uppercase; letter-spacing: .08em; }
 body.agent .toast .tick { background: var(--on-accent); color: var(--accent); border-radius: 4px; }
 @media (prefers-reduced-motion: reduce) {
@@ -312,7 +301,6 @@ body.agent .toast .tick { background: var(--on-accent); color: var(--accent); bo
 .chat-form { display: flex; gap: 8px; align-items: flex-end; }
 .chat-form textarea { flex: 1; min-width: 0; font: 16px/1.4 var(--font); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--ink); resize: none; height: 48px; min-height: 48px; max-height: 140px; display: block; }
 .chat-form button { flex: none; height: 48px; padding-top: 0; padding-bottom: 0; }
-body.clubhouse .msg, body.clubhouse .chat-form textarea { border-radius: 2px; }
 body.agent .msg, body.agent .chat-form textarea { border-radius: 4px; }
 main, .card, .rounds, .round { grid-template-columns: minmax(0, 1fr); }
 .card > *, .round > * { min-width: 0; }
@@ -352,7 +340,7 @@ form.busy, label.photo.busy, #player.busy { opacity: .45; pointer-events: none; 
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --field: #111113; --field-line: #4a4a52; } }
 :root[data-theme="dark"] { --field: #111113; --field-line: #4a4a52; }
 body.agent { --muted: #86b898; --field: #0b1611; --field-line: #2f6b4a; }
-body.clubhouse { --muted: #bccbc0; --field: #1b3428; --field-line: rgba(212,166,74,.6); }
+body.clubhouse { --field: #ffffff; --field-line: #8f8a7a; }
 body.baby { --ink: #3a2856; --muted: #6f5899; --field: #ffffff; --field-line: #f06aa8; }
 body.signed-out { --field: transparent; --field-line: #3a3a3a; --muted: #9a9a9a; }
 input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], .hgrid input, .prow select {
@@ -366,7 +354,6 @@ body.agent input:focus, body.agent .hgrid input:focus { box-shadow: 0 0 0 3px rg
 body.baby input[type=text], body.baby input[type=number], body.baby input[type=date], body.baby .hgrid input { border-width: 2px; border-radius: 14px; }
 body.baby .hgrid input { border-radius: 10px; }
 body.baby .field label, body.baby .field .hint-label { font-weight: 600; }
-body.clubhouse .field label, body.clubhouse .field .hint-label { text-transform: uppercase; letter-spacing: .14em; font-size: 11px; color: var(--accent); }
 body.agent .field label, body.agent .field .hint-label { text-transform: uppercase; letter-spacing: .12em; font-weight: 400; color: var(--accent); }
 .gate-form input[type=email], .gate-form input[type=password], .gate-form input[type=text] { background: transparent; border: 0; border-bottom: 1px solid var(--field-line); box-shadow: none; }
 
@@ -386,8 +373,6 @@ body.baby .hgrid input.yds, body.agent .hgrid input.yds { font-size: 12px; lette
 body.agent .prow-rm { border-radius: 3px; color: #ff3355; border-color: #5a1a26; }
 body.agent .prow-rm:hover, body.agent .prow-rm:focus-visible { background: #ff3355; color: #050607; }
 body.agent .rows-undo { border-radius: 4px; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
-body.clubhouse .prow-rm { border-radius: 2px; font-family: var(--serif); color: var(--accent); border-color: var(--brass-line); }
-body.clubhouse .rows-undo { border-radius: 2px; font-style: italic; font-family: var(--serif); }
 body.baby .prow-rm { background: #fff; color: #e0458d; border: 2px solid #ffc2df; }
 body.baby .prow-rm:hover, body.baby .prow-rm:focus-visible { background: #ff7eb6; border-color: #ff7eb6; color: #fff; }
 body.baby .rows-undo { border-radius: 16px; border-width: 2px; border-color: #ffc2df; }
@@ -401,8 +386,6 @@ body.baby .rows-undo { border-radius: 16px; border-width: 2px; border-color: #ff
 .tee-yds { font-size: 12px; opacity: .75; font-weight: 600; }
 body.agent .tee-pick, body.agent .tee-chip { border-radius: 4px; }
 body.agent .tee-chip { text-transform: uppercase; letter-spacing: .08em; font-weight: 400; }
-body.clubhouse .tee-pick, body.clubhouse .tee-chip { border-radius: 2px; }
-body.clubhouse .tee-chip .tee-name { font-family: var(--serif); }
 body.baby .tee-pick { border-radius: 18px; border-width: 2px; }
 
 /* ===== scorecard photo: full width, with "replace" docked underneath ===== */
@@ -424,11 +407,6 @@ body.agent .card-frame.has-photo .preview-wrap::before { content: ""; position: 
 body.agent .card-frame.has-photo .preview-wrap::after { content: "EXHIBIT A // CLASSIFIED"; position: absolute; left: 16px; bottom: 14px; z-index: 1; font-size: 10px; letter-spacing: .2em; color: #fff; background: #ff3355; padding: 3px 7px; }
 body.agent .card-frame.has-photo .preview-wrap.reading::after { content: ""; inset: 0; left: 0; bottom: 0; padding: 0; background: linear-gradient(100deg, transparent 30%, rgba(0,255,136,.35) 50%, transparent 70%); background-size: 250% 100%; }
 body.agent .card-frame.has-photo label.photo { border-top: 1px dashed #2f6b4a; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 400; background: #07100b; }
-/* clubhouse: matted photograph in a brass rule, caption in serif italic */
-body.clubhouse .card-frame.has-photo { border-radius: 2px; padding: 8px; border: 1px solid var(--brass-line); box-shadow: inset 0 0 0 4px var(--panel), inset 0 0 0 5px var(--brass-line); }
-body.clubhouse .card-frame.has-photo label.photo { border-top: 0; padding: 12px 0 4px; font-family: var(--serif); font-style: italic; font-weight: 600; font-size: 16px; text-transform: none; letter-spacing: 0; }
-body.clubhouse .card-frame.has-photo label.photo::before { content: "—"; font-style: normal; }
-body.clubhouse .card-frame.has-photo label.photo::after { content: "—"; font-style: normal; }
 /* baby: a polaroid taped to the page */
 body.baby .card-frame.has-photo { background: #fff; border: 0; border-radius: 6px; padding: 12px 12px 0; overflow: visible; position: relative; transform: rotate(-.8deg); margin-inline: 4px; box-shadow: 0 6px 18px rgba(122,74,150,.18), 0 0 0 2px #ffd6ea; margin-top: 10px; }
 body.baby .card-frame.has-photo::before { content: ""; position: absolute; top: -12px; left: 50%; width: 92px; height: 24px; transform: translateX(-50%) rotate(3deg); background: repeating-linear-gradient(45deg, rgba(255,126,182,.75) 0 8px, rgba(255,182,214,.75) 8px 16px); border-radius: 3px; z-index: 2; }
@@ -469,17 +447,8 @@ body.agent .prow.none .who .nm { background: #ff3355; color: #050607; padding: 0
 body.agent .prow .chips span { border-radius: 2px; }
 body.agent .prow select { border-radius: 4px; font-size: 13px; max-width: 118px; }
 body.agent .prow.me { box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(0,255,136,.18); }
-/* clubhouse: members' register */
-body.clubhouse .rows-panel { border-radius: 2px; border-color: var(--brass-line); }
-body.clubhouse .rows-panel .rp-title { font-family: var(--serif); font-size: 20px; font-weight: 700; }
-body.clubhouse .prow { border-radius: 2px; border-color: var(--line); }
-body.clubhouse .prow .av { background: transparent; border: 1.5px solid var(--accent); color: var(--accent); font-family: var(--serif); font-size: 19px; font-weight: 700; }
-body.clubhouse .prow .who .nm { font-family: var(--serif); font-size: 17px; font-weight: 600; }
-body.clubhouse .prow .tagstate { font-style: italic; font-weight: 600; font-family: var(--serif); font-size: 13px; }
-body.clubhouse .prow select { border-radius: 2px; }
-body.clubhouse .prow .chips span { border-radius: 1px; background: var(--field); }
-body.clubhouse .prow.me { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-body.clubhouse .prow.me .av { background: var(--accent); color: var(--on-accent); }
+/* clubhouse: soft green initials */
+body.clubhouse .prow .av { background: var(--green-soft); color: var(--accent); }
 /* baby: playdate cards */
 body.baby .rows-panel { border-radius: 24px; border: 3px dashed #ffc2df; background: #fff; }
 body.baby .rows-panel .rp-title { font-size: 19px; font-weight: 700; }
@@ -535,7 +504,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <section class="app-only card hidden" id="inboxCard" aria-label="Tagged rounds">
-    <div class="card-head"><h2 data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Cards to attest">Tagged rounds</h2></div>
+    <div class="card-head"><h2 data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Rounds to confirm">Tagged rounds</h2></div>
     <div id="inboxList"></div>
     <div class="status" id="inboxStatus" aria-live="polite"></div>
   </section>
@@ -612,7 +581,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     </div>
     <div id="readStatus" class="status" aria-live="polite"></div>
     <div class="rows-panel hidden" id="rowsPanel">
-      <div><strong class="rp-title" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Attest each line before posting. Members you name will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
+      <div><strong class="rp-title" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Check each row before posting. Anyone you tag will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
       <div id="rowsList"></div>
       <div class="rows-undo hidden" id="rowsUndo" role="status" aria-live="polite"><span id="rowsUndoText"></span><button type="button" class="text" id="rowsUndoBtn">Undo</button></div>
     </div>
@@ -1017,7 +986,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     $("photoLabel").textContent = photoLabelText();
   }
   function sheetTitleText() {
-    if (editingPending) return { baby: "Is This Your Round? 🍼", agent: "Verify intel", clubhouse: "Attest card" }[theme] || "Review tagged round";
+    if (editingPending) return { baby: "Is This Your Round? 🍼", agent: "Verify intel", clubhouse: "Confirm card" }[theme] || "Review tagged round";
     return editing
       ? ({ baby: "Fix Your Oopsie 🍼", agent: "Amend dossier" }[theme] || "Edit round")
       : ({ baby: "Tell Us About Your Round, Sweetie 🍼", agent: "File after-action report" }[theme] || "Log a round");
@@ -1201,7 +1170,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   function renderRows() {
     $("rowsPanel").classList.toggle("hidden", !cardRows.length && !removedRow);
     $("rowsUndo").classList.toggle("hidden", !removedRow);
-    if (removedRow) $("rowsUndoText").textContent = ({ agent: `${removedRow.row.label} purged from the file.`, clubhouse: `${removedRow.row.label} struck from the card.`, baby: `Bye-bye, ${removedRow.row.label}! 👋` }[theme] || `Removed ${removedRow.row.label}.`);
+    if (removedRow) $("rowsUndoText").textContent = ({ agent: `${removedRow.row.label} purged from the file.`, clubhouse: `${removedRow.row.label} taken off the card.`, baby: `Bye-bye, ${removedRow.row.label}! 👋` }[theme] || `Removed ${removedRow.row.label}.`);
     if (!cardRows.length) { $("rowsList").innerHTML = ""; return; }
     const me = myId();
     const opts = [{ id: me, name: "Me" }, ...players.filter(p => p.user_id !== me).map(p => ({ id: p.user_id, name: p.name })), { id: "", name: "Guest" }];
@@ -1212,7 +1181,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     }[theme] || { me: "You", tagged: "Tagged", none: "Not in the app" };
     // Your own row always comes first; the rest keep their order on the card.
     const order = cardRows.map((_, i) => i).sort((a, b) => (rowAssign[b] === me) - (rowAssign[a] === me) || a - b);
-    const rmLabel = { agent: "Purge", clubhouse: "Strike", baby: "Bye-bye" }[theme] || "Remove";
+    const rmLabel = { agent: "Purge", clubhouse: "Remove", baby: "Bye-bye" }[theme] || "Remove";
     $("rowsList").innerHTML = order.map((i) => {
       const r = cardRows[i];
       const tot = rowTotal(r), who = rowAssign[i] || "";
@@ -1564,7 +1533,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   const BABY_HASHES = ["f0486866c4db00576c276157d2e3ebeb07009ec0ba841c40fb9b0778e1538095"];
   const COLORBLIND_HASHES = ["c6ee4741717bc589fa9560d27d3e992310f0a6e69910814e9d44036b13cdfde3"];
   const THEMES = ["agent", "clubhouse", "baby"];
-  const THEME_COLORS = { agent: "#050607", clubhouse: "#0e1d16", baby: "#fff4fa" };
+  const THEME_COLORS = { agent: "#050607", clubhouse: "#f6f5f0", baby: "#fff4fa" };
   let theme = "", codename = "";
   const CODENAMES = ["Viper", "Nightshade", "Ghost", "Cobra", "Phantom", "Raven", "Wraith", "Jackal", "Specter", "Falcon"];
   async function sha256(text) {
