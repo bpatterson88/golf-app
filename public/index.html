@@ -86,6 +86,16 @@ body.clubhouse .seg button[aria-pressed="true"] { background: var(--accent); col
 body.clubhouse .theme-menu { border-radius: 16px; box-shadow: 0 8px 24px rgba(29,27,38,.14); }
 body.clubhouse .pill.soft { background: var(--soft); color: var(--on-soft); }
 
+/* clubhouse: leading stroke icons on section headers (2.4 main, 1.8 detail) */
+body.clubhouse [class*="ic-"]::before { content: ""; display: inline-block; width: 22px; height: 22px; margin-right: 8px; vertical-align: -4px; background: var(--accent); -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+body.clubhouse .ic-inbox { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 13l2-7.5a1 1 0 011-.5h10a1 1 0 011 .5L20 13v5a2 2 0 01-2 2H6a2 2 0 01-2-2z%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M4 13h4.5l1 2h5l1-2H20%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M10 9.5l1.5 1.5 2.5-2.5%22 stroke-width=%221.8%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-chat { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 4h12a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4.5 3.5V16H6a2 2 0 01-2-2V6a2 2 0 012-2z%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M8.5 10h.01M12 10h.01M15.5 10h.01%22 stroke-width=%222.4%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-trend { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 4v14a2 2 0 002 2h14%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M7.5 9l3.5 4 3-2.5 3 3.5%22 stroke-width=%222.4%22/%3E%3Ccircle cx=%2218.5%22 cy=%2215.5%22 r=%221.5%22 stroke-width=%221.8%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-flag { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M9 19V3.5%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M9 4l8 3.25L9 10.5%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M5 19.5c1 .7 2.5 1 4 1s3-.3 4-1%22 stroke-width=%221.8%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-trophy { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7.5 4h9v5a4.5 4.5 0 01-9 0z%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M7.5 6H5a2.5 2.5 0 002.5 4M16.5 6H19a2.5 2.5 0 01-2.5 4%22 stroke-width=%221.8%22/%3E%3Cpath d=%22M12 13.5V17M8.5 20h7%22 stroke-width=%222.4%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-ball { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%2212%22 cy=%228.5%22 r=%225.5%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M10.5 7h.01M13.5 7.5h.01M12 10h.01%22 stroke-width=%221.8%22/%3E%3Cpath d=%22M9 16.5h6M12 16.5v4%22 stroke-width=%222.4%22/%3E%3C/svg%3E"); }
+body.clubhouse .ic-people { --ic: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%228%22 r=%223%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M3.5 19.5a5.5 5.5 0 0111 0%22 stroke-width=%222.4%22/%3E%3Cpath d=%22M15.5 5.2a3 3 0 010 5.6M17.5 14a5.5 5.5 0 013 5.5%22 stroke-width=%221.8%22/%3E%3C/svg%3E"); }
+
 /* colorblind-friendly score colors (Okabe-Ito based), for accounts in COLORBLIND_HASHES; works with every theme */
 body.cb { --birdie: #0072b2; --par: #56b4e9; --bogey: #f0e442; --double: #e69f00; --triple: #d55e00; }
 body.cb .mini .s.eagle, body.cb .mini .s.birdie { color: #ffffff; border-radius: 50%; }
@@ -498,7 +508,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <section class="app-only card hidden" id="inboxCard" aria-label="Tagged rounds">
-    <div class="card-head"><h2 data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Rounds to confirm">Tagged rounds</h2></div>
+    <div class="card-head"><h2 class="ic-inbox" data-baby="Fwiends Sent You Scores 🧸" data-agent="Incoming intel" data-clubhouse="Rounds to confirm">Tagged rounds</h2></div>
     <div id="inboxList"></div>
     <div class="status" id="inboxStatus" aria-live="polite"></div>
   </section>
@@ -516,7 +526,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
   </section>
 
   <section class="app-only card" aria-label="Ask Claude">
-    <div class="card-head"><h2 data-baby="Ask Coach Claude 🧸" data-agent="Debrief with HQ" data-clubhouse="Ask the pro">Ask Claude</h2></div>
+    <div class="card-head"><h2 class="ic-chat" data-baby="Ask Coach Claude 🧸" data-agent="Debrief with HQ" data-clubhouse="Ask the pro">Ask Claude</h2></div>
     <div class="chat-log" id="chatLog" aria-live="polite"></div>
     <form id="chatForm" class="chat-form">
       <label for="chatInput" class="sr-only">Message</label>
@@ -528,7 +538,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
 
   <section class="app-only card" aria-label="Score trend">
     <div class="card-head">
-      <h2 data-baby="Big Numbers Over Time 📈" data-agent="Mission performance">Score over time</h2>
+      <h2 class="ic-trend" data-baby="Big Numbers Over Time 📈" data-agent="Mission performance">Score over time</h2>
       <div class="seg" role="group" aria-label="Chart rounds">
         <button type="button" id="chart18" aria-pressed="true">18 holes</button>
         <button type="button" id="chart9" aria-pressed="false">9 holes</button>
@@ -538,18 +548,18 @@ body.baby .prow.none { border-color: #e6d9f5; }
   </section>
 
   <section class="app-only card" aria-label="Hole scoring">
-    <div class="card-head"><h2 data-baby="Boo-Boos Per Hole 🩹" data-agent="Target elimination report">Hole scoring</h2><span class="meta" id="mixSub"></span></div>
+    <div class="card-head"><h2 class="ic-flag" data-baby="Boo-Boos Per Hole 🩹" data-agent="Target elimination report">Hole scoring</h2><span class="meta" id="mixSub"></span></div>
     <div id="mix"><p class="empty">Log rounds with hole scores and par to see your birdies, pars and bogeys.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Course records">
-    <div class="card-head"><h2 data-baby="Gold Stars ⭐" data-agent="Best operations by location" data-clubhouse="Course bests">Course records</h2></div>
+    <div class="card-head"><h2 class="ic-trophy" data-baby="Gold Stars ⭐" data-agent="Best operations by location" data-clubhouse="Course bests">Course records</h2></div>
     <div class="tbl" id="records"><p class="empty">Your best score at each course will show here.</p></div>
   </section>
 
   <section class="app-only card" aria-label="Rounds">
     <div class="card-head">
-      <h2 data-baby="Wittle Rounds 🧸" data-agent="Mission log">Rounds</h2>
+      <h2 class="ic-ball" data-baby="Wittle Rounds 🧸" data-agent="Mission log">Rounds</h2>
       <button type="button" class="ghost small" id="exportBtn">Export CSV</button>
     </div>
     <div class="status" id="exportStatus" aria-live="polite"></div>
@@ -575,7 +585,7 @@ body.baby .prow.none { border-color: #e6d9f5; }
     </div>
     <div id="readStatus" class="status" aria-live="polite"></div>
     <div class="rows-panel hidden" id="rowsPanel">
-      <div><strong class="rp-title" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Check each row before posting. Anyone you tag will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
+      <div><strong class="rp-title ic-people" data-agent="Identify the operatives" data-clubhouse="Players on the card" data-baby="Who Played With You? 🧸">Who's who on this card</strong><p class="meta" data-agent="Match each row to an agent. Tagged agents must confirm before it hits their file." data-clubhouse="Check each row before posting. Anyone you tag will be asked to confirm their score." data-baby="Pick who's who so your friends get their scores too! They'll say yes or no 💕">Check each row before saving. Anyone you tag gets their score to accept or reject.</p></div>
       <div id="rowsList"></div>
       <div class="rows-undo hidden" id="rowsUndo" role="status" aria-live="polite"><span id="rowsUndoText"></span><button type="button" class="text" id="rowsUndoBtn">Undo</button></div>
     </div>
